@@ -1,0 +1,25 @@
+# Build artifacts
+build/
+dist/
+build-*/
+*.deb
+*.rpm
+*.apk
+*.tar.gz
+
+# Docker build cache
+.docker/
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

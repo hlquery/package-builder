@@ -1,0 +1,31 @@
+[Unit]
+Description=hlquery - Search beyond keywords
+Documentation=https://docs.hlquery.com
+After=network.target
+
+[Service]
+Type=simple
+User=hlquery
+Group=hlquery
+WorkingDirectory=/var/lib/hlquery
+ExecStart=/usr/bin/hlquery start --nofork
+ExecStop=/usr/bin/hlquery stop
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hlquery
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/hlquery /var/log/hlquery
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
