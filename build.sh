@@ -42,6 +42,63 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+require_command() {
+    local command_name="$1"
+    local package_hint="$2"
+
+    if command -v "$command_name" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    MISSING_MESSAGES+=("Missing command '$command_name'${package_hint:+ (package: $package_hint)}")
+    return 1
+}
+
+require_dpkg_package() {
+    local package_name="$1"
+
+    if dpkg -s "$package_name" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    MISSING_MESSAGES+=("Missing Debian package '$package_name'")
+    return 1
+}
+
+check_debian_build_dependencies() {
+    MISSING_MESSAGES=()
+
+    require_command git git
+    require_command make build-essential
+    require_command g++ build-essential
+    require_command cmake cmake
+    require_command dpkg-deb dpkg-dev
+    require_command fakeroot fakeroot
+
+    if command -v dpkg >/dev/null 2>&1; then
+        require_dpkg_package build-essential
+        require_dpkg_package zlib1g-dev
+        require_dpkg_package libssl-dev
+        require_dpkg_package dpkg-dev
+        require_dpkg_package fakeroot
+        require_dpkg_package cmake
+    fi
+
+    if [ "${#MISSING_MESSAGES[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    log_error "Missing Debian build dependencies."
+    for message in "${MISSING_MESSAGES[@]}"; do
+        log_error "  - $message"
+    done
+    echo
+    log_info "Install them with:"
+    echo "  sudo apt-get update"
+    echo "  sudo apt-get install build-essential zlib1g-dev libssl-dev dpkg-dev fakeroot cmake git"
+    exit 1
+}
+
 resolve_remote_default_branch() {
     local default_ref
 
@@ -195,6 +252,11 @@ log_info "Architecture: $ARCH"
 log_info "Build mode: $BUILD_MODE"
 log_info "Git version: $GIT_VERSION"
 
+if [ "$PACKAGE_TYPE" = "all" ] || [ "$PACKAGE_TYPE" = "deb" ]; then
+    log_info "Checking Debian package build prerequisites..."
+    check_debian_build_dependencies
+fi
+
 # Create directories
 mkdir -p "$BUILD_DIR" "$DIST_DIR"
 
@@ -221,14 +283,6 @@ else
         log_info "Successfully checked out $GIT_VERSION"
         cd ..
     fi
-fi
-
-# Check for RocksDB build dependencies
-log_info "Checking build dependencies..."
-if ! command -v cmake &> /dev/null; then
-    log_warn "cmake not found. RocksDB will be built from source if vendor/rocksdb exists,"
-    log_warn "or will attempt to link against system RocksDB libraries."
-    log_warn "To build RocksDB from source, install cmake: sudo apt-get install cmake"
 fi
 
 cd "$SOURCE_DIR"

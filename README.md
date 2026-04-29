@@ -40,12 +40,23 @@ make clean
 
 ### For Debian Packages
 
-- `dpkg-deb` (usually included in `dpkg-dev` package)
+- `build-essential`
+- `zlib1g-dev`
+- `libssl-dev`
+- `dpkg-dev`
 - `fakeroot` (recommended for proper file ownership)
+- `cmake`
+- `git`
 
 Install on Debian/Ubuntu:
 ```bash
-sudo apt-get install dpkg-dev fakeroot
+sudo apt-get update
+sudo apt-get install build-essential zlib1g-dev libssl-dev dpkg-dev fakeroot cmake git
+```
+
+Or use the bundled helper:
+```bash
+./install-deps-debian.sh
 ```
 
 ### For RPM Packages
