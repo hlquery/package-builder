@@ -99,6 +99,53 @@ check_debian_build_dependencies() {
     exit 1
 }
 
+check_rpm_build_dependencies() {
+    MISSING_MESSAGES=()
+
+    require_command git git
+    require_command make make
+    require_command g++ gcc-c++
+    require_command cmake cmake
+    require_command rpmbuild rpm-build
+    require_command tar tar
+    require_command gzip gzip
+
+    if command -v dpkg >/dev/null 2>&1; then
+        require_dpkg_package build-essential
+        require_dpkg_package zlib1g-dev
+        require_dpkg_package libssl-dev
+        require_dpkg_package cmake
+        require_dpkg_package git
+    elif command -v rpm >/dev/null 2>&1; then
+        for package_name in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build tar gzip; do
+            if ! rpm -q "$package_name" >/dev/null 2>&1; then
+                MISSING_MESSAGES+=("Missing RPM package '$package_name'")
+            fi
+        done
+    fi
+
+    if [ "${#MISSING_MESSAGES[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    log_error "Missing RPM build dependencies."
+    for message in "${MISSING_MESSAGES[@]}"; do
+        log_error "  - $message"
+    done
+    echo
+
+    if command -v dnf >/dev/null 2>&1; then
+        log_info "Install them with:"
+        echo "  sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip"
+    else
+        log_info "Install them with:"
+        echo "  sudo apt-get update"
+        echo "  sudo apt-get install build-essential zlib1g-dev libssl-dev cmake git rpm"
+    fi
+
+    exit 1
+}
+
 resolve_remote_default_branch() {
     local default_ref
 
@@ -255,6 +302,11 @@ log_info "Git version: $GIT_VERSION"
 if [ "$PACKAGE_TYPE" = "all" ] || [ "$PACKAGE_TYPE" = "deb" ]; then
     log_info "Checking Debian package build prerequisites..."
     check_debian_build_dependencies
+fi
+
+if [ "$PACKAGE_TYPE" = "all" ] || [ "$PACKAGE_TYPE" = "rpm" ]; then
+    log_info "Checking RPM package build prerequisites..."
+    check_rpm_build_dependencies
 fi
 
 # Create directories

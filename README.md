@@ -1,8 +1,7 @@
-# Package Builder for hlquery
+### Package Builder for hlquery
 
 **Search beyond keywords** - This directory contains scripts and configuration files for building distribution packages (Debian `.deb` and RPM `.rpm`) for hlquery.
 
-## Quick Start
 
 ### Building All Package Types
 
@@ -25,18 +24,18 @@ This will build both Debian and RPM packages in the `dist/` directory.
 ### Using Make
 
 ```bash
-# Build all packages
+### Build all packages
 make
 
-# Build specific package type
+### Build specific package type
 make deb
 make rpm
 
-# Clean build directories
+### Clean build directories
 make clean
 ```
 
-## Requirements
+### Requirements
 
 ### For Debian Packages
 
@@ -50,22 +49,35 @@ make clean
 
 Install on Debian/Ubuntu:
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential zlib1g-dev libssl-dev dpkg-dev fakeroot cmake git
+$ sudo apt-get update
+$ sudo apt-get install build-essential zlib1g-dev libssl-dev dpkg-dev fakeroot cmake git
 ```
 
 Or use the bundled helper:
 ```bash
-./install-deps-debian.sh
+$ ./install-deps-debian.sh
 ```
 
 ### For RPM Packages
 
-- `rpmbuild` (usually included in `rpm-build` package)
+- `rpm-build`
+- `gcc-c++`
+- `make`
+- `openssl-devel`
+- `zlib-devel`
+- `cmake`
+- `git`
+- `tar`
+- `gzip`
 
 Install on RedHat/CentOS/Fedora:
 ```bash
-sudo dnf install rpm-build
+$ sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip
+```
+
+Or use the bundled helper:
+```bash
+$ ./install-deps-rpm.sh
 ```
 
 ## Usage
@@ -74,23 +86,23 @@ sudo dnf install rpm-build
 
 ```bash
 # Build with default settings (clones from GitHub unstable branch)
-./build.sh
+$ ./build.sh
 
 # Build from a specific Git branch or tag
-./build.sh --git-version 1.0.0
+$ ./build.sh --git-version 1.0.0
 
 # Build with custom package version
-./build.sh --version 1.0.0 --release 1
+$ ./build.sh --version 1.0.0 --release 1
 
 # Build for specific architecture
-./build.sh --arch x86_64
+$ ./build.sh --arch x86_64
 ```
 
 ### Advanced Usage
 
 ```bash
 # Build with all options
-./build.sh \
+$ ./build.sh \
   --type all \
   --version 1.0.0 \
   --git-version v1.0.0 \
@@ -98,10 +110,10 @@ sudo dnf install rpm-build
   --arch x86_64
 
 # Build from a specific branch
-./build.sh --git-version develop --version 1.1.0-dev
+$ ./build.sh --git-version develop --version 1.1.0-dev
 
 # Clean build directories
-./build.sh --clean
+$ ./build.sh --clean
 ```
 
 ### Command-Line Options
@@ -120,12 +132,12 @@ sudo dnf install rpm-build
 You can also set these via environment variables:
 
 ```bash
-export VERSION=1.0.0
-export GIT_VERSION=unstable
-export RELEASE=1
-export ARCH=x86_64
-export BUILD_MODE=release
-./build.sh
+$ export VERSION=1.0.0
+$ export GIT_VERSION=unstable
+$ export RELEASE=1
+$ export ARCH=x86_64
+$ export BUILD_MODE=release
+$ ./build.sh
 ```
 
 ## Package Structure
@@ -148,33 +160,33 @@ The RPM package includes:
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
 - **Systemd service**: `/usr/lib/systemd/system/hlquery.service` (if available)
 
-## Installation
+### Installation
 
 ### Installing Debian Package
 
 ```bash
 # Install package
-sudo dpkg -i dist/hlquery_1.0.0-1_amd64.deb
+$ sudo dpkg -i dist/hlquery_1.0.0-1_amd64.deb
 
 # Fix dependencies if needed
-sudo apt-get install -f
+$ sudo apt-get install -f
 
 # Verify installation
-hlquery-cli status
+$ hlquery-cli status
 ```
 
 ### Installing RPM Package
 
 ```bash
 # Install package
-sudo rpm -ivh dist/hlquery-1.0.0-1.x86_64.rpm
+$ sudo rpm -ivh dist/hlquery-1.0.0-1.x86_64.rpm
 
 # Or use yum/dnf
-sudo yum install dist/hlquery-1.0.0-1.x86_64.rpm
-sudo dnf install dist/hlquery-1.0.0-1.x86_64.rpm
+$ sudo yum install dist/hlquery-1.0.0-1.x86_64.rpm
+$ sudo dnf install dist/hlquery-1.0.0-1.x86_64.rpm
 
 # Verify installation
-hlquery-cli status
+$ hlquery-cli status
 ```
 
 ## Build Process
@@ -222,79 +234,6 @@ Edit the package control files:
 - **Debian**: Modify `Depends:` in `build-deb.sh`
 - **RPM**: Modify `Requires:` in `build-rpm.sh` spec file
 
-## CI/CD Integration
-
-### GitHub Actions Example
-
-```yaml
-name: Build Packages
-
-on:
-  release:
-    types: [created]
-
-jobs:
-  build-packages:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev fakeroot rpm-build
-      
-      - name: Build packages
-        run: |
-          cd etc/package
-          ./build.sh --version ${{ github.event.release.tag_name }} --git-version ${{ github.event.release.tag_name }} --release 1
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: packages
-          path: etc/package/dist/*
-```
-
-### GitLab CI Example
-
-```yaml
-build-packages:
-  image: ubuntu:22.04
-  before_script:
-    - apt-get update
-    - apt-get install -y dpkg-dev fakeroot rpm-build build-essential
-  script:
-    - cd etc/package
-    - ./build.sh --version ${CI_COMMIT_TAG} --git-version ${CI_COMMIT_TAG} --release 1
-  artifacts:
-    paths:
-      - etc/package/dist/
-    expire_in: 1 week
-```
-
-## Troubleshooting
-
-### Build Fails with Permission Errors
-
-Use `fakeroot` for Debian packages:
-
-```bash
-fakeroot ./build.sh --type deb
-```
-
-### Architecture Mismatch
-
-Specify the correct architecture:
-
-```bash
-# For x86_64
-./build.sh --arch x86_64
-
-# For ARM64
-./build.sh --arch aarch64
-```
-
 ### Missing Dependencies
 
 Install required build tools:
@@ -318,55 +257,6 @@ dpkg -c dist/hlquery_1.0.0-1_amd64.deb
 # RPM
 rpm -qlp dist/hlquery-1.0.0-1.x86_64.rpm
 ```
-
-## Directory Structure
-
-```
-etc/package/
-├── README.md          # This file
-├── Makefile           # Makefile for building packages
-├── build.sh           # Main build script
-├── build-deb.sh       # Debian package builder
-├── build-rpm.sh       # RPM package builder
-├── build/             # Temporary build directory (created during build)
-└── dist/              # Output directory for built packages
-```
-
-## Best Practices
-
-1. **Version Management**: Always use semantic versioning (e.g., `1.0.0`)
-2. **Release Numbers**: Increment release number for package rebuilds
-3. **Architecture**: Build packages for target architecture
-4. **Testing**: Test packages in clean environments before distribution
-5. **Signing**: Sign packages for production distribution
-
-## Signing Packages
-
-### Debian Package Signing
-
-```bash
-# Generate GPG key (if needed)
-gpg --gen-key
-
-# Sign package
-debsigs --sign=origin dist/hlquery_1.0.0-1_amd64.deb
-```
-
-### RPM Package Signing
-
-```bash
-# Generate GPG key (if needed)
-gpg --gen-key
-
-# Sign package
-rpm --addsign dist/hlquery-1.0.0-1.x86_64.rpm
-```
-
-## Additional Resources
-
-- [Debian Packaging Guide](https://www.debian.org/doc/manuals/packaging-tutorial/)
-- [RPM Packaging Guide](https://rpm-packaging-guide.github.io/)
-- [hlquery Documentation](https://docs.hlquery.com)
 
 ## Support
 
