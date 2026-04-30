@@ -41,6 +41,10 @@ map_deb_arch() {
 
 DEB_ARCH="$(map_deb_arch "$ARCH")"
 
+dpkg_root_owner_group_supported() {
+    dpkg-deb --help 2>/dev/null | grep -q -- '--root-owner-group'
+}
+
 # Create Debian package structure
 rm -rf "$DEB_DIR"
 mkdir -p "$DEB_DIR/DEBIAN"
@@ -54,10 +58,17 @@ fi
 cp -a "$INSTALL_DIR"/. "$DEB_DIR"/
 
 mkdir -p "$DEB_DIR/lib/systemd/system"
+mkdir -p "$DEB_DIR/etc/init.d"
 
 # Copy systemd service file if it exists
 if [ -f "$PACKAGE_DIR/hlquery.service" ]; then
     cp "$PACKAGE_DIR/hlquery.service" "$DEB_DIR/lib/systemd/system/"
+fi
+
+# Copy SysV init script for non-systemd environments.
+if [ -f "$PACKAGE_DIR/hlquery.init" ]; then
+    cp "$PACKAGE_DIR/hlquery.init" "$DEB_DIR/etc/init.d/hlquery"
+    chmod 0755 "$DEB_DIR/etc/init.d/hlquery"
 fi
 
 # Create control file
@@ -93,9 +104,20 @@ fi
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
 
-# Enable systemd service if it exists
-if [ -f /lib/systemd/system/hlquery.service ]; then
+# Enable service on boot and start it when possible.
+if command -v systemctl >/dev/null 2>&1 && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload || true
+    systemctl enable hlquery.service >/dev/null 2>&1 || true
+    systemctl start hlquery.service >/dev/null 2>&1 || true
+elif [ -x /etc/init.d/hlquery ]; then
+    if command -v update-rc.d >/dev/null 2>&1; then
+        update-rc.d hlquery defaults >/dev/null 2>&1 || true
+    fi
+    if command -v invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d hlquery start >/dev/null 2>&1 || true
+    else
+        /etc/init.d/hlquery start >/dev/null 2>&1 || true
+    fi
 fi
 
 exit 0
@@ -108,8 +130,10 @@ cat > "$DEB_DIR/DEBIAN/prerm" <<'EOF'
 set -e
 
 # Stop service before removal
-if systemctl is-active --quiet hlquery 2>/dev/null; then
+if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet hlquery 2>/dev/null; then
     systemctl stop hlquery || true
+elif [ -x /etc/init.d/hlquery ]; then
+    /etc/init.d/hlquery stop >/dev/null 2>&1 || true
 fi
 
 exit 0
@@ -121,9 +145,15 @@ cat > "$DEB_DIR/DEBIAN/postrm" <<'EOF'
 #!/bin/bash
 set -e
 
-# Reload systemd if service file exists
-if [ -f /lib/systemd/system/hlquery.service ]; then
+if command -v systemctl >/dev/null 2>&1 && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload || true
+    if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+        systemctl disable hlquery.service >/dev/null 2>&1 || true
+    fi
+fi
+
+if [ "$1" = "purge" ] && [ -x /etc/init.d/hlquery ] && command -v update-rc.d >/dev/null 2>&1; then
+    update-rc.d -f hlquery remove >/dev/null 2>&1 || true
 fi
 
 exit 0
@@ -137,6 +167,12 @@ fi
 
 # Build the package
 mkdir -p "$DIST_DIR"
-dpkg-deb --build "$DEB_DIR" "$DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+
+DPKG_DEB_ARGS=()
+if dpkg_root_owner_group_supported; then
+    DPKG_DEB_ARGS+=(--root-owner-group)
+fi
+
+dpkg-deb "${DPKG_DEB_ARGS[@]}" --build "$DEB_DIR" "$DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
 
 echo "Debian package built: $DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"

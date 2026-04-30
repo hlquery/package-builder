@@ -68,20 +68,20 @@ require_dpkg_package() {
 check_debian_build_dependencies() {
     MISSING_MESSAGES=()
 
-    require_command git git
-    require_command make build-essential
-    require_command g++ build-essential
-    require_command cmake cmake
-    require_command dpkg-deb dpkg-dev
-    require_command fakeroot fakeroot
+    require_command git git || true
+    require_command make build-essential || true
+    require_command g++ build-essential || true
+    require_command cmake cmake || true
+    require_command dpkg-deb dpkg-dev || true
+    require_command fakeroot fakeroot || true
 
     if command -v dpkg >/dev/null 2>&1; then
-        require_dpkg_package build-essential
-        require_dpkg_package zlib1g-dev
-        require_dpkg_package libssl-dev
-        require_dpkg_package dpkg-dev
-        require_dpkg_package fakeroot
-        require_dpkg_package cmake
+        require_dpkg_package build-essential || true
+        require_dpkg_package zlib1g-dev || true
+        require_dpkg_package libssl-dev || true
+        require_dpkg_package dpkg-dev || true
+        require_dpkg_package fakeroot || true
+        require_dpkg_package cmake || true
     fi
 
     if [ "${#MISSING_MESSAGES[@]}" -eq 0 ]; then
@@ -102,20 +102,20 @@ check_debian_build_dependencies() {
 check_rpm_build_dependencies() {
     MISSING_MESSAGES=()
 
-    require_command git git
-    require_command make make
-    require_command g++ gcc-c++
-    require_command cmake cmake
-    require_command rpmbuild rpm-build
-    require_command tar tar
-    require_command gzip gzip
+    require_command git git || true
+    require_command make make || true
+    require_command g++ gcc-c++ || true
+    require_command cmake cmake || true
+    require_command rpmbuild rpm-build || true
+    require_command tar tar || true
+    require_command gzip gzip || true
 
     if command -v dpkg >/dev/null 2>&1; then
-        require_dpkg_package build-essential
-        require_dpkg_package zlib1g-dev
-        require_dpkg_package libssl-dev
-        require_dpkg_package cmake
-        require_dpkg_package git
+        require_dpkg_package build-essential || true
+        require_dpkg_package zlib1g-dev || true
+        require_dpkg_package libssl-dev || true
+        require_dpkg_package cmake || true
+        require_dpkg_package git || true
     elif command -v rpm >/dev/null 2>&1; then
         for package_name in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build tar gzip; do
             if ! rpm -q "$package_name" >/dev/null 2>&1; then

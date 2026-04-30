@@ -43,6 +43,10 @@ if [ -f "$PACKAGE_DIR/hlquery.service" ]; then
     cp "$PACKAGE_DIR/hlquery.service" "$RPMBUILD_DIR/SOURCES/"
 fi
 
+if [ -f "$PACKAGE_DIR/hlquery.init" ]; then
+    cp "$PACKAGE_DIR/hlquery.init" "$RPMBUILD_DIR/SOURCES/"
+fi
+
 SPEC_FILE="$RPMBUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
 cat > "$SPEC_FILE" <<EOF
 %global debug_package %{nil}
@@ -68,6 +72,10 @@ Provides full-text search, hybrid search, and vector similarity search.
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -a . %{buildroot}/
+if [ -f %{_sourcedir}/hlquery.init ]; then
+    mkdir -p %{buildroot}/etc/init.d
+    install -m 0755 %{_sourcedir}/hlquery.init %{buildroot}/etc/init.d/hlquery
+fi
 
 %pre
 if ! id -u hlquery >/dev/null 2>&1; then
@@ -77,17 +85,39 @@ fi
 %post
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
-if [ -f /usr/lib/systemd/system/hlquery.service ]; then
+if command -v systemctl >/dev/null 2>&1 && [ -f /usr/lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload || true
+    systemctl enable hlquery.service >/dev/null 2>&1 || true
+    systemctl start hlquery.service >/dev/null 2>&1 || true
+elif [ -x /etc/init.d/hlquery ]; then
+    if command -v chkconfig >/dev/null 2>&1; then
+        chkconfig --add hlquery >/dev/null 2>&1 || true
+        chkconfig hlquery on >/dev/null 2>&1 || true
+    fi
+    if command -v service >/dev/null 2>&1; then
+        service hlquery start >/dev/null 2>&1 || true
+    else
+        /etc/init.d/hlquery start >/dev/null 2>&1 || true
+    fi
 fi
 
 %preun
-if systemctl is-active --quiet hlquery 2>/dev/null; then
-    systemctl stop hlquery || true
+if [ "\$1" -eq 0 ]; then
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl disable hlquery.service >/dev/null 2>&1 || true
+        if systemctl is-active --quiet hlquery 2>/dev/null; then
+            systemctl stop hlquery || true
+        fi
+    elif [ -x /etc/init.d/hlquery ]; then
+        /etc/init.d/hlquery stop >/dev/null 2>&1 || true
+        if command -v chkconfig >/dev/null 2>&1; then
+            chkconfig --del hlquery >/dev/null 2>&1 || true
+        fi
+    fi
 fi
 
 %postun
-if [ -f /usr/lib/systemd/system/hlquery.service ]; then
+if command -v systemctl >/dev/null 2>&1 && [ -f /usr/lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload || true
 fi
 
@@ -106,6 +136,7 @@ fi
 %dir %{_prefix}/lib/hlquery/modules
 %{_prefix}/lib/hlquery/modules/*
 /usr/lib/systemd/system/hlquery.service
+/etc/init.d/hlquery
 
 %changelog
 * $(date '+%a %b %d %Y') $MAINTAINER - $VERSION-$RELEASE

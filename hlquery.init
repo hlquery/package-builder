@@ -1,0 +1,58 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          hlquery
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: hlquery search service
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+NAME=hlquery
+DAEMON=/usr/bin/hlquery
+SERVICE_NAME=hlquery.service
+
+is_systemd_active() {
+    command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]
+}
+
+run_daemon_command() {
+    if [ ! -x "$DAEMON" ]; then
+        echo "$NAME executable not found at $DAEMON" >&2
+        return 1
+    fi
+
+    "$DAEMON" "$@"
+}
+
+case "$1" in
+    start)
+        if is_systemd_active; then
+            exec systemctl start "$SERVICE_NAME"
+        fi
+        exec run_daemon_command start
+        ;;
+    stop)
+        if is_systemd_active; then
+            exec systemctl stop "$SERVICE_NAME"
+        fi
+        exec run_daemon_command stop
+        ;;
+    restart|force-reload)
+        if is_systemd_active; then
+            exec systemctl restart "$SERVICE_NAME"
+        fi
+        exec run_daemon_command restart
+        ;;
+    status)
+        if is_systemd_active; then
+            exec systemctl status "$SERVICE_NAME"
+        fi
+        exec run_daemon_command status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|force-reload|status}" >&2
+        exit 1
+        ;;
+esac
