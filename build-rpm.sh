@@ -83,12 +83,22 @@ if ! id -u hlquery >/dev/null 2>&1; then
 fi
 
 %post
-chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
-chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery 2>/dev/null || true
-if command -v systemctl >/dev/null 2>&1 && [ -f /usr/lib/systemd/system/hlquery.service ]; then
-    systemctl daemon-reload || true
+mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
+chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
+chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /usr/lib/systemd/system/hlquery.service ]; then
+    systemctl daemon-reload
     systemctl enable hlquery.service >/dev/null 2>&1 || true
-    systemctl start hlquery.service >/dev/null 2>&1 || true
+    if ! systemctl start hlquery.service; then
+        systemctl status --no-pager hlquery.service || true
+        journalctl -u hlquery.service -n 50 --no-pager || true
+        exit 1
+    fi
+    if ! systemctl is-active --quiet hlquery.service; then
+        systemctl status --no-pager hlquery.service || true
+        journalctl -u hlquery.service -n 50 --no-pager || true
+        exit 1
+    fi
 elif [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
