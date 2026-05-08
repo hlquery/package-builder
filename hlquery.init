@@ -10,7 +10,7 @@
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 NAME=hlquery
-DAEMON=/usr/bin/hlquery
+DAEMON=/usr/bin/hlquery-wrapper
 SERVICE_NAME=hlquery.service
 
 is_systemd_active() {

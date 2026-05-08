@@ -146,19 +146,19 @@ $ ./build.sh
 
 The Debian package includes:
 
-- **Binary files**: `/usr/bin/hlquery`, `/usr/bin/hlquery-cli`
+- **Binary files**: `/usr/bin/hlquery`, `/usr/bin/hlquery-cli`, `/usr/bin/hlquery-wrapper`
 - **Configuration**: `/etc/hlquery/`
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
-- **Systemd service**: `/lib/systemd/system/hlquery.service` (if available)
+- **Systemd service**: `/lib/systemd/system/hlquery.service`
 
 ### RPM Package (.rpm)
 
 The RPM package includes:
 
-- **Binary files**: `/usr/bin/hlquery`, `/usr/bin/hlquery-cli`
+- **Binary files**: `/usr/bin/hlquery`, `/usr/bin/hlquery-cli`, `/usr/bin/hlquery-wrapper`
 - **Configuration**: `/etc/hlquery/`
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
-- **Systemd service**: `/usr/lib/systemd/system/hlquery.service` (if available)
+- **Systemd service**: `/usr/lib/systemd/system/hlquery.service`
 
 ### Installation
 
@@ -168,11 +168,9 @@ The RPM package includes:
 # Install package
 $ sudo dpkg -i dist/hlquery_1.0.0-1_amd64.deb
 
-# Fix dependencies if needed
-$ sudo apt-get install -f
-
 # Verify installation
-$ hlquery-cli status
+$ systemctl status hlquery
+$ hlquery-wrapper status
 ```
 
 ### Installing RPM Package
@@ -186,7 +184,8 @@ $ sudo yum install dist/hlquery-1.0.0-1.x86_64.rpm
 $ sudo dnf install dist/hlquery-1.0.0-1.x86_64.rpm
 
 # Verify installation
-$ hlquery-cli status
+$ systemctl status hlquery
+$ hlquery-wrapper status
 ```
 
 ## Build Process

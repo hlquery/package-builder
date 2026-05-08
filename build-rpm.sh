@@ -57,6 +57,8 @@ Summary:        $DESCRIPTION
 License:        BSD-3-Clause
 URL:            $URL
 Source0:        %{name}-%{version}.tar.gz
+BuildArch:      $RPM_ARCH
+%{?systemd_requires}
 
 %description
 Search beyond keywords. High-performance search engine with RocksDB storage.
@@ -86,40 +88,20 @@ fi
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
-if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /usr/lib/systemd/system/hlquery.service ]; then
-    systemctl daemon-reload
-    systemctl enable hlquery.service >/dev/null 2>&1 || true
-    if ! systemctl start hlquery.service; then
-        systemctl status --no-pager hlquery.service || true
-        journalctl -u hlquery.service -n 50 --no-pager || true
-        exit 1
-    fi
-    if ! systemctl is-active --quiet hlquery.service; then
-        systemctl status --no-pager hlquery.service || true
-        journalctl -u hlquery.service -n 50 --no-pager || true
-        exit 1
-    fi
+if [ -f %{_unitdir}/hlquery.service ]; then
+%systemd_post hlquery.service
 elif [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
         chkconfig hlquery on >/dev/null 2>&1 || true
     fi
-    if command -v service >/dev/null 2>&1; then
-        service hlquery start >/dev/null 2>&1 || true
-    else
-        /etc/init.d/hlquery start >/dev/null 2>&1 || true
-    fi
 fi
 
 %preun
 if [ "\$1" -eq 0 ]; then
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl disable hlquery.service >/dev/null 2>&1 || true
-        if systemctl is-active --quiet hlquery 2>/dev/null; then
-            systemctl stop hlquery || true
-        fi
+    if [ -f %{_unitdir}/hlquery.service ]; then
+%systemd_preun hlquery.service
     elif [ -x /etc/init.d/hlquery ]; then
-        /etc/init.d/hlquery stop >/dev/null 2>&1 || true
         if command -v chkconfig >/dev/null 2>&1; then
             chkconfig --del hlquery >/dev/null 2>&1 || true
         fi
@@ -127,8 +109,10 @@ if [ "\$1" -eq 0 ]; then
 fi
 
 %postun
-if command -v systemctl >/dev/null 2>&1 && [ -f /usr/lib/systemd/system/hlquery.service ]; then
-    systemctl daemon-reload || true
+if [ -f %{_unitdir}/hlquery.service ]; then
+%systemd_postun_with_restart hlquery.service
+elif command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
 %files
@@ -138,6 +122,7 @@ fi
 %{_bindir}/hlquery-benchmark
 %{_bindir}/hlquery-talk
 %{_bindir}/hlquery-wrapper
+%dir %{_sysconfdir}/hlquery
 %config(noreplace) %{_sysconfdir}/hlquery/*
 %dir %attr(0755,hlquery,hlquery) /var/lib/hlquery
 %dir %attr(0755,hlquery,hlquery) /var/log/hlquery
@@ -145,7 +130,7 @@ fi
 %dir %{_prefix}/lib/hlquery
 %dir %{_prefix}/lib/hlquery/modules
 %{_prefix}/lib/hlquery/modules/*
-/usr/lib/systemd/system/hlquery.service
+%{_unitdir}/hlquery.service
 /etc/init.d/hlquery
 
 %changelog
