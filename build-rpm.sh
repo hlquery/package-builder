@@ -99,6 +99,15 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
    grep -q 'model_file="Qwen2.5-14B-Instruct-Q4_K_M.gguf"' /etc/hlquery/hlquery.conf; then
     sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
 fi
+if [ -f /etc/hlquery/hlquery.conf ]; then
+    sed -i \
+        -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
+        -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
+        -e 's|target="queries.log"|target="/var/log/hlquery/queries.log"|g' \
+        -e 's|target="sam.log"|target="/var/log/hlquery/sam.log"|g' \
+        -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
+        /etc/hlquery/hlquery.conf
+fi
 if [ -f %{_unitdir}/hlquery.service ]; then
 %systemd_post hlquery.service
 elif [ -x /etc/init.d/hlquery ]; then

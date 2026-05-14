@@ -245,6 +245,16 @@ build_and_stage() {
         # The source tree may enable local LLMs with repo-local model paths.
         # Distribution packages must start cleanly without bundling GGUF models.
         sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' "$staged_config"
+
+        # Keep packaged logs out of /etc when older binaries or preserved
+        # config files resolve relative targets against the config directory.
+        sed -i \
+            -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
+            -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
+            -e 's|target="queries.log"|target="/var/log/hlquery/queries.log"|g' \
+            -e 's|target="sam.log"|target="/var/log/hlquery/sam.log"|g' \
+            -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
+            "$staged_config"
     fi
 }
 

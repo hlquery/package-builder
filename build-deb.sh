@@ -160,6 +160,16 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
     sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
 fi
 
+if [ -f /etc/hlquery/hlquery.conf ]; then
+    sed -i \
+        -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
+        -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
+        -e 's|target="queries.log"|target="/var/log/hlquery/queries.log"|g' \
+        -e 's|target="sam.log"|target="/var/log/hlquery/sam.log"|g' \
+        -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
+        /etc/hlquery/hlquery.conf
+fi
+
 # Register and start the service using Debian helpers when available.
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload
