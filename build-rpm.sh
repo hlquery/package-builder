@@ -94,6 +94,11 @@ fi
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
+if [ -f /etc/hlquery/hlquery.conf ] &&
+   grep -q 'models_dir="run/models"' /etc/hlquery/hlquery.conf &&
+   grep -q 'model_file="Qwen2.5-14B-Instruct-Q4_K_M.gguf"' /etc/hlquery/hlquery.conf; then
+    sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
+fi
 if [ -f %{_unitdir}/hlquery.service ]; then
 %systemd_post hlquery.service
 elif [ -x /etc/init.d/hlquery ]; then

@@ -151,6 +151,15 @@ mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
 
+# Older packages shipped a development LLM config that points at run/models.
+# dpkg preserves conffiles on reinstall, so normalize that unsafe default before
+# starting the service. User configs with different model paths are left alone.
+if [ -f /etc/hlquery/hlquery.conf ] &&
+   grep -q 'models_dir="run/models"' /etc/hlquery/hlquery.conf &&
+   grep -q 'model_file="Qwen2.5-14B-Instruct-Q4_K_M.gguf"' /etc/hlquery/hlquery.conf; then
+    sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
+fi
+
 # Register and start the service using Debian helpers when available.
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload
