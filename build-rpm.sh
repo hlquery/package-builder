@@ -128,6 +128,7 @@ fi
 %{_bindir}/hlquery-benchmark
 %{_bindir}/hlquery-talk
 %{_bindir}/hlquery-wrapper
+%{_bindir}/hlqueryctl
 %dir %{_sysconfdir}/hlquery
 %config(noreplace) %{_sysconfdir}/hlquery/*
 %dir %attr(0755,hlquery,hlquery) /var/lib/hlquery
