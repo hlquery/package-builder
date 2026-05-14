@@ -38,6 +38,7 @@ fi
 
 rm -rf "$RPM_DIR"
 mkdir -p "$RPMBUILD_DIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p "$RPM_DIR/rpmdb"
 
 if [ -f "$PACKAGE_DIR/hlquery.service" ]; then
     cp "$PACKAGE_DIR/hlquery.service" "$RPMBUILD_DIR/SOURCES/"
@@ -50,6 +51,7 @@ fi
 SPEC_FILE="$RPMBUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
 cat > "$SPEC_FILE" <<EOF
 %global debug_package %{nil}
+%{!?_unitdir:%global _unitdir /usr/lib/systemd/system}
 Name:           $PACKAGE_NAME
 Version:        $VERSION
 Release:        $RELEASE%{?dist}
@@ -74,6 +76,10 @@ Provides full-text search, hybrid search, and vector similarity search.
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -a . %{buildroot}/
+if [ -f %{_sourcedir}/hlquery.service ] && [ ! -f %{buildroot}%{_unitdir}/hlquery.service ]; then
+    mkdir -p %{buildroot}%{_unitdir}
+    install -m 0644 %{_sourcedir}/hlquery.service %{buildroot}%{_unitdir}/hlquery.service
+fi
 if [ -f %{_sourcedir}/hlquery.init ]; then
     mkdir -p %{buildroot}/etc/init.d
     install -m 0755 %{_sourcedir}/hlquery.init %{buildroot}/etc/init.d/hlquery
@@ -147,6 +153,7 @@ tar czf "$RPMBUILD_DIR/SOURCES/${PACKAGE_NAME}-${VERSION}.tar.gz" \
 
 rpmbuild --define "_topdir $RPMBUILD_DIR" \
          --define "_rpmdir $DIST_DIR" \
+         --define "_dbpath $RPM_DIR/rpmdb" \
          -ba "$SPEC_FILE"
 
 RPM_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME}-${VERSION}-${RELEASE}*.${RPM_ARCH}.rpm" | head -1)
