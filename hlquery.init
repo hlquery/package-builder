@@ -17,6 +17,41 @@ is_systemd_active() {
     command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]
 }
 
+run_systemd_command() {
+    action="$1"
+    shift
+
+    case "$action" in
+        start)
+            echo "Starting $NAME service..."
+            ;;
+        stop)
+            echo "Stopping $NAME service..."
+            ;;
+        restart)
+            echo "Restarting $NAME service..."
+            ;;
+    esac
+
+    if systemctl "$action" "$SERVICE_NAME"; then
+        case "$action" in
+            start)
+                echo "$NAME service started."
+                ;;
+            stop)
+                echo "$NAME service stopped."
+                ;;
+            restart)
+                echo "$NAME service restarted."
+                ;;
+        esac
+        return 0
+    fi
+
+    echo "Failed to $action $NAME service. Run: journalctl -u $SERVICE_NAME -n 80 --no-pager" >&2
+    return 1
+}
+
 run_daemon_command() {
     if [ ! -x "$DAEMON" ]; then
         echo "$NAME executable not found at $DAEMON" >&2
@@ -29,19 +64,22 @@ run_daemon_command() {
 case "$1" in
     start)
         if is_systemd_active; then
-            exec systemctl start "$SERVICE_NAME"
+            run_systemd_command start
+            exit $?
         fi
         exec run_daemon_command start
         ;;
     stop)
         if is_systemd_active; then
-            exec systemctl stop "$SERVICE_NAME"
+            run_systemd_command stop
+            exit $?
         fi
         exec run_daemon_command stop
         ;;
     restart|force-reload)
         if is_systemd_active; then
-            exec systemctl restart "$SERVICE_NAME"
+            run_systemd_command restart
+            exit $?
         fi
         exec run_daemon_command restart
         ;;

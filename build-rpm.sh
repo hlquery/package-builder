@@ -60,7 +60,6 @@ License:        BSD-3-Clause
 URL:            $URL
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      $RPM_ARCH
-%{?systemd_requires}
 
 %description
 Search beyond keywords. High-performance search engine with RocksDB storage.
@@ -76,6 +75,9 @@ Provides full-text search, hybrid search, and vector similarity search.
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -a . %{buildroot}/
+if [ -e %{buildroot}%{_bindir}/hlquery-wrapper ]; then
+    ln -sfn hlquery-wrapper %{buildroot}%{_bindir}/hlqueryctl
+fi
 if [ -f %{_sourcedir}/hlquery.service ] && [ ! -f %{buildroot}%{_unitdir}/hlquery.service ]; then
     mkdir -p %{buildroot}%{_unitdir}
     install -m 0644 %{_sourcedir}/hlquery.service %{buildroot}%{_unitdir}/hlquery.service
@@ -95,11 +97,13 @@ mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
 if [ -f /etc/hlquery/hlquery.conf ] &&
+   grep -A4 '<llm' /etc/hlquery/hlquery.conf | grep -q 'enabled="true"' &&
    grep -q 'models_dir="run/models"' /etc/hlquery/hlquery.conf &&
    grep -q 'model_file="Qwen2.5-14B-Instruct-Q4_K_M.gguf"' /etc/hlquery/hlquery.conf; then
     sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
 fi
-if [ -f /etc/hlquery/hlquery.conf ]; then
+if [ -f /etc/hlquery/hlquery.conf ] &&
+   grep -Eq 'target="(hlquery|database|queries|sam|links)\.log"' /etc/hlquery/hlquery.conf; then
     sed -i \
         -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
         -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
@@ -108,8 +112,10 @@ if [ -f /etc/hlquery/hlquery.conf ]; then
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
-if [ -f %{_unitdir}/hlquery.service ]; then
-%systemd_post hlquery.service
+if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl enable hlquery.service >/dev/null 2>&1 || true
+    systemctl start hlquery.service >/dev/null 2>&1 || true
 elif [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
@@ -119,8 +125,9 @@ fi
 
 %preun
 if [ "\$1" -eq 0 ]; then
-    if [ -f %{_unitdir}/hlquery.service ]; then
-%systemd_preun hlquery.service
+    if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
+        systemctl stop hlquery.service >/dev/null 2>&1 || true
+        systemctl disable hlquery.service >/dev/null 2>&1 || true
     elif [ -x /etc/init.d/hlquery ]; then
         if command -v chkconfig >/dev/null 2>&1; then
             chkconfig --del hlquery >/dev/null 2>&1 || true
@@ -129,10 +136,11 @@ if [ "\$1" -eq 0 ]; then
 fi
 
 %postun
-if [ -f %{_unitdir}/hlquery.service ]; then
-%systemd_postun_with_restart hlquery.service
-elif command -v systemctl >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
     systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ "\$1" -ge 1 ]; then
+        systemctl try-restart hlquery.service >/dev/null 2>&1 || true
+    fi
 fi
 
 %files
@@ -145,9 +153,9 @@ fi
 %{_bindir}/hlqueryctl
 %dir %{_sysconfdir}/hlquery
 %config(noreplace) %{_sysconfdir}/hlquery/*
-%dir %attr(0755,hlquery,hlquery) /var/lib/hlquery
-%dir %attr(0755,hlquery,hlquery) /var/log/hlquery
-%dir %attr(0755,hlquery,hlquery) /run/hlquery
+%verify(not user group) %dir /var/lib/hlquery
+%verify(not user group) %dir /var/log/hlquery
+%verify(not user group) %dir /run/hlquery
 %dir %{_prefix}/lib/hlquery
 %dir %{_prefix}/lib/hlquery/modules
 %{_prefix}/lib/hlquery/modules/*

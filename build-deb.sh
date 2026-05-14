@@ -155,6 +155,7 @@ chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
 # dpkg preserves conffiles on reinstall, so normalize that unsafe default before
 # starting the service. User configs with different model paths are left alone.
 if [ -f /etc/hlquery/hlquery.conf ] &&
+   grep -A4 '<llm' /etc/hlquery/hlquery.conf | grep -q 'enabled="true"' &&
    grep -q 'models_dir="run/models"' /etc/hlquery/hlquery.conf &&
    grep -q 'model_file="Qwen2.5-14B-Instruct-Q4_K_M.gguf"' /etc/hlquery/hlquery.conf; then
     sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
