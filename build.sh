@@ -228,6 +228,7 @@ cleanup() {
 build_and_stage() {
     local layout="$1"
     local stage_dir="$2"
+    local staged_config
 
     log_info "Configuring source tree for '$layout' layout..."
     ./configure --layout="$layout"
@@ -238,6 +239,13 @@ build_and_stage() {
     log_info "Staging install tree for '$layout' layout..."
     rm -rf "$stage_dir"
     make install-system DESTDIR="$stage_dir"
+
+    staged_config="$stage_dir/etc/hlquery/hlquery.conf"
+    if [ -f "$staged_config" ]; then
+        # The source tree may enable local LLMs with repo-local model paths.
+        # Distribution packages must start cleanly without bundling GGUF models.
+        sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' "$staged_config"
+    fi
 }
 
 # Parse arguments
