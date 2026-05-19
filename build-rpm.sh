@@ -60,6 +60,7 @@ License:        BSD-3-Clause
 URL:            $URL
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      $RPM_ARCH
+Requires:       perl
 
 %description
 Search beyond keywords. High-performance search engine with RocksDB storage.
@@ -112,15 +113,20 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
+warn_service_start_failed() {
+    echo "Warning: hlquery service did not start during package installation." >&2
+    echo "Inspect with: systemctl status hlquery.service || journalctl -u hlquery.service -n 80 --no-pager" >&2
+}
 if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
     systemctl daemon-reload >/dev/null 2>&1 || true
     systemctl enable hlquery.service >/dev/null 2>&1 || true
-    systemctl start hlquery.service >/dev/null 2>&1 || true
+    systemctl start hlquery.service >/dev/null 2>&1 || warn_service_start_failed
 elif [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
         chkconfig hlquery on >/dev/null 2>&1 || true
     fi
+    /etc/init.d/hlquery start >/dev/null 2>&1 || warn_service_start_failed
 fi
 
 %preun

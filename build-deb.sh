@@ -172,6 +172,11 @@ if [ -f /etc/hlquery/hlquery.conf ]; then
 fi
 
 # Register and start the service using Debian helpers when available.
+warn_service_start_failed() {
+    echo "Warning: hlquery service did not start during package installation." >&2
+    echo "Inspect with: systemctl status hlquery.service || journalctl -u hlquery.service -n 80 --no-pager" >&2
+}
+
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload
     if command -v deb-systemd-helper >/dev/null 2>&1; then
@@ -182,20 +187,20 @@ if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /l
     fi
 
     if command -v deb-systemd-invoke >/dev/null 2>&1; then
-        deb-systemd-invoke start hlquery.service >/dev/null || true
+        deb-systemd-invoke start hlquery.service >/dev/null || warn_service_start_failed
     elif command -v invoke-rc.d >/dev/null 2>&1; then
-        invoke-rc.d hlquery start >/dev/null 2>&1 || true
+        invoke-rc.d hlquery start >/dev/null 2>&1 || warn_service_start_failed
     else
-        systemctl start hlquery.service >/dev/null 2>&1 || true
+        systemctl start hlquery.service >/dev/null 2>&1 || warn_service_start_failed
     fi
 elif [ -x /etc/init.d/hlquery ]; then
     if command -v update-rc.d >/dev/null 2>&1; then
         update-rc.d hlquery defaults >/dev/null 2>&1 || true
     fi
     if command -v invoke-rc.d >/dev/null 2>&1; then
-        invoke-rc.d hlquery start >/dev/null 2>&1 || true
+        invoke-rc.d hlquery start >/dev/null 2>&1 || warn_service_start_failed
     else
-        /etc/init.d/hlquery start >/dev/null 2>&1 || true
+        /etc/init.d/hlquery start >/dev/null 2>&1 || warn_service_start_failed
     fi
 fi
 

@@ -12,9 +12,21 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 NAME=hlquery
 DAEMON=/usr/bin/hlquery-wrapper
 SERVICE_NAME=hlquery.service
+RUNTIME_DIR=/run/hlquery
+STATE_DIR=/var/lib/hlquery
+LOG_DIR=/var/log/hlquery
 
 is_systemd_active() {
     command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]
+}
+
+ensure_runtime_dirs() {
+    mkdir -p "$RUNTIME_DIR" "$STATE_DIR" "$LOG_DIR" || return 1
+    chmod 755 "$RUNTIME_DIR" "$STATE_DIR" "$LOG_DIR" || return 1
+
+    if id -u "$NAME" >/dev/null 2>&1; then
+        chown "$NAME:$NAME" "$RUNTIME_DIR" "$STATE_DIR" "$LOG_DIR" || return 1
+    fi
 }
 
 run_systemd_command() {
@@ -67,6 +79,10 @@ case "$1" in
             run_systemd_command start
             exit $?
         fi
+        ensure_runtime_dirs || {
+            echo "Failed to prepare runtime directories for $NAME." >&2
+            exit 1
+        }
         exec run_daemon_command start
         ;;
     stop)
