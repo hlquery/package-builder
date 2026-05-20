@@ -166,12 +166,14 @@ The RPM package includes:
 
 ```bash
 # Install package
-$ sudo dpkg -i dist/hlquery_1.0.0-1_amd64.deb
+$ sudo ./dist/install-hlquery-deb.sh
 
 # Verify installation
 $ systemctl status hlquery
 $ hlquery-wrapper status
 ```
+
+The generated install helper sets Debian's standard root paths before invoking `dpkg`, which avoids install failures in minimal shells where `/usr/sbin` or `/sbin` are missing from `PATH`.
 
 ### Installing RPM Package
 

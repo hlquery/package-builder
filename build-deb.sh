@@ -3,6 +3,8 @@
 
 set -e
 
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 INSTALL_DIR="$1"
 VERSION="$2"
 RELEASE="$3"
@@ -137,6 +139,8 @@ cat > "$DEB_DIR/DEBIAN/postinst" <<'EOF'
 #!/bin/bash
 set -e
 
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 # Create user if it doesn't exist
 if ! id -u hlquery >/dev/null 2>&1; then
     if command -v useradd >/dev/null 2>&1; then
@@ -213,6 +217,8 @@ cat > "$DEB_DIR/DEBIAN/prerm" <<'EOF'
 #!/bin/bash
 set -e
 
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 # Stop service before removal
 if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ] || [ "$1" = "upgrade" ]; then
     if command -v deb-systemd-invoke >/dev/null 2>&1; then
@@ -232,6 +238,8 @@ chmod +x "$DEB_DIR/DEBIAN/prerm"
 cat > "$DEB_DIR/DEBIAN/postrm" <<'EOF'
 #!/bin/bash
 set -e
+
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 if command -v systemctl >/dev/null 2>&1 && [ -f /lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload || true
@@ -265,4 +273,21 @@ fi
 
 dpkg-deb "${DPKG_DEB_ARGS[@]}" --build "$DEB_DIR" "$DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
 
+cat > "$DIST_DIR/install-${PACKAGE_NAME}-deb.sh" <<EOF
+#!/bin/sh
+set -e
+
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:\${PATH:-}"
+
+PACKAGE_PATH="\$(dirname "\$0")/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+
+if [ "\$(id -u)" -ne 0 ]; then
+    exec sudo env PATH="\$PATH" dpkg -i "\$PACKAGE_PATH"
+fi
+
+exec dpkg -i "\$PACKAGE_PATH"
+EOF
+chmod 0755 "$DIST_DIR/install-${PACKAGE_NAME}-deb.sh"
+
 echo "Debian package built: $DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+echo "Install helper built: $DIST_DIR/install-${PACKAGE_NAME}-deb.sh"
