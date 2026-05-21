@@ -21,6 +21,22 @@ MAINTAINER="${MAINTAINER:-Carlos F. Ferry <carlos.ferry@gmail.com>}"
 DESCRIPTION="Search beyond keywords - High-performance search engine with RocksDB storage"
 URL="https://www.hlquery.com"
 
+validate_debian_version() {
+    local version="$1"
+    local release="$2"
+
+    if [[ ! "$version" =~ ^[0-9][A-Za-z0-9.+~_]*$ ]]; then
+        echo "Error: invalid Debian package version '$version'." >&2
+        echo "Use a version such as '1.0.0' or '1.0.0~rc1'; OS release text with spaces is not valid." >&2
+        exit 1
+    fi
+
+    if [[ ! "$release" =~ ^[A-Za-z0-9.+~_]+$ ]]; then
+        echo "Error: invalid Debian package release '$release'." >&2
+        exit 1
+    fi
+}
+
 map_deb_arch() {
     case "$1" in
         x86_64|amd64)
@@ -40,6 +56,8 @@ map_deb_arch() {
             ;;
     esac
 }
+
+validate_debian_version "$VERSION" "$RELEASE"
 
 DEB_ARCH="$(map_deb_arch "$ARCH")"
 

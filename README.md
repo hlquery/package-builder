@@ -111,7 +111,7 @@ $ ./build.sh \
   --arch x86_64
 
 # Build from a specific branch
-$ ./build.sh --git-version develop --version 1.1.0-dev
+$ ./build.sh --git-version develop --version 1.1.0~dev
 
 # Clean build directories
 $ ./build.sh --clean
@@ -121,6 +121,7 @@ $ ./build.sh --clean
 
 - `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type)
 - `--version VER`: Package version (default: `1.0.0`)
+  - Use package-safe values such as `1.0.0` or `1.0.0~rc1`; do not use OS release text such as `24.04.4 LTS (Noble Numbat)`
 - `--git-version VER`: Git branch or tag to clone (default: `unstable`)
   - Examples: `unstable`, `1.0.0`, `v1.0.0`, `develop`
 - `--release REL`: Package release number (default: `1`)

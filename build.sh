@@ -44,6 +44,60 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+trim_value() {
+    local value="$1"
+
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s' "$value"
+}
+
+normalize_package_version() {
+    local raw_version normalized
+
+    raw_version="$(trim_value "$1")"
+
+    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        log_warn "Normalized package version '$raw_version' to '$normalized' by dropping the leading v." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_-]*)[[:space:]]+ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        log_warn "Normalized package version '$raw_version' to '$normalized'." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    printf '%s' "$raw_version"
+}
+
+validate_package_version() {
+    local version="$1"
+
+    if [[ "$version" =~ ^[0-9][A-Za-z0-9.+~_]*$ ]]; then
+        return 0
+    fi
+
+    log_error "Invalid package version '$version'."
+    log_error "Use a package version such as '1.0.0' or '1.0.0~rc1'. Do not use OS release text like '24.04.4 LTS (Noble Numbat)'."
+    exit 1
+}
+
+validate_package_release() {
+    local release="$1"
+
+    if [[ "$release" =~ ^[A-Za-z0-9.+~_]+$ ]]; then
+        return 0
+    fi
+
+    log_error "Invalid package release '$release'."
+    log_error "Use a release value such as '1' or '1ubuntu1'; spaces and hyphens are not valid here."
+    exit 1
+}
+
 require_command() {
     local command_name="$1"
     local package_hint="$2"
@@ -336,6 +390,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+VERSION="$(normalize_package_version "$VERSION")"
+RELEASE="$(trim_value "$RELEASE")"
+validate_package_version "$VERSION"
+validate_package_release "$RELEASE"
+
 # Default to the native package type when the platform is clear.
 if [ -z "$PACKAGE_TYPE" ]; then
     if is_rpm_platform && ! is_debian_platform; then
@@ -346,6 +405,15 @@ if [ -z "$PACKAGE_TYPE" ]; then
         PACKAGE_TYPE="all"
     fi
 fi
+
+case "$PACKAGE_TYPE" in
+    deb|rpm|all)
+        ;;
+    *)
+        log_error "Invalid package type '$PACKAGE_TYPE'. Use 'deb', 'rpm', or 'all'."
+        exit 1
+        ;;
+esac
 
 log_info "Building $PACKAGE_NAME version $VERSION"
 log_info "Package type: $PACKAGE_TYPE"

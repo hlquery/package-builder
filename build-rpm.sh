@@ -19,6 +19,24 @@ MAINTAINER="${MAINTAINER:-Carlos F. Ferry <carlos.ferry@gmail.com>}"
 DESCRIPTION="Search beyond keywords - High-performance search engine with RocksDB storage"
 URL="https://www.hlquery.com"
 
+validate_rpm_version() {
+    local version="$1"
+    local release="$2"
+
+    if [[ ! "$version" =~ ^[0-9][A-Za-z0-9.+~_]*$ ]]; then
+        echo "Error: invalid RPM package version '$version'." >&2
+        echo "Use a version such as '1.0.0' or '1.0.0~rc1'; spaces, hyphens, and OS release text are not valid." >&2
+        exit 1
+    fi
+
+    if [[ ! "$release" =~ ^[A-Za-z0-9.+~_]+$ ]]; then
+        echo "Error: invalid RPM package release '$release'." >&2
+        exit 1
+    fi
+}
+
+validate_rpm_version "$VERSION" "$RELEASE"
+
 case "$ARCH" in
     x86_64)
         RPM_ARCH="x86_64"
