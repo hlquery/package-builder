@@ -48,6 +48,10 @@ if [ -f "$PACKAGE_DIR/hlquery.init" ]; then
     cp "$PACKAGE_DIR/hlquery.init" "$RPMBUILD_DIR/SOURCES/"
 fi
 
+cat > "$RPMBUILD_DIR/SOURCES/80-hlquery.preset" <<'EOF'
+enable hlquery.service
+EOF
+
 SPEC_FILE="$RPMBUILD_DIR/SPECS/${PACKAGE_NAME}.spec"
 cat > "$SPEC_FILE" <<EOF
 %global debug_package %{nil}
@@ -60,7 +64,12 @@ License:        BSD-3-Clause
 URL:            $URL
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      $RPM_ARCH
+BuildRequires:  systemd-rpm-macros
 Requires:       perl
+Requires(pre):  shadow-utils
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
 
 %description
 Search beyond keywords. High-performance search engine with RocksDB storage.
@@ -83,6 +92,8 @@ if [ -f %{_sourcedir}/hlquery.service ] && [ ! -f %{buildroot}%{_unitdir}/hlquer
     mkdir -p %{buildroot}%{_unitdir}
     install -m 0644 %{_sourcedir}/hlquery.service %{buildroot}%{_unitdir}/hlquery.service
 fi
+mkdir -p %{buildroot}%{_prefix}/lib/systemd/system-preset
+install -m 0644 %{_sourcedir}/80-hlquery.preset %{buildroot}%{_prefix}/lib/systemd/system-preset/80-hlquery.preset
 if [ -f %{_sourcedir}/hlquery.init ]; then
     mkdir -p %{buildroot}/etc/init.d
     install -m 0755 %{_sourcedir}/hlquery.init %{buildroot}/etc/init.d/hlquery
@@ -113,41 +124,24 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
-warn_service_start_failed() {
-    echo "Warning: hlquery service did not start during package installation." >&2
-    echo "Inspect with: systemctl status hlquery.service || journalctl -u hlquery.service -n 80 --no-pager" >&2
-}
-if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    systemctl enable hlquery.service >/dev/null 2>&1 || true
-    systemctl start hlquery.service >/dev/null 2>&1 || warn_service_start_failed
-elif [ -x /etc/init.d/hlquery ]; then
+%systemd_post hlquery.service
+if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
         chkconfig hlquery on >/dev/null 2>&1 || true
     fi
-    /etc/init.d/hlquery start >/dev/null 2>&1 || warn_service_start_failed
 fi
 
 %preun
-if [ "\$1" -eq 0 ]; then
-    if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
-        systemctl stop hlquery.service >/dev/null 2>&1 || true
-        systemctl disable hlquery.service >/dev/null 2>&1 || true
-    elif [ -x /etc/init.d/hlquery ]; then
-        if command -v chkconfig >/dev/null 2>&1; then
-            chkconfig --del hlquery >/dev/null 2>&1 || true
-        fi
+%systemd_preun hlquery.service
+if [ "\$1" -eq 0 ] && ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
+    if command -v chkconfig >/dev/null 2>&1; then
+        chkconfig --del hlquery >/dev/null 2>&1 || true
     fi
 fi
 
 %postun
-if command -v systemctl >/dev/null 2>&1 && [ -f %{_unitdir}/hlquery.service ]; then
-    systemctl daemon-reload >/dev/null 2>&1 || true
-    if [ "\$1" -ge 1 ]; then
-        systemctl try-restart hlquery.service >/dev/null 2>&1 || true
-    fi
-fi
+%systemd_postun_with_restart hlquery.service
 
 %files
 %defattr(-,root,root,-)
@@ -166,6 +160,7 @@ fi
 %dir %{_prefix}/lib/hlquery/modules
 %{_prefix}/lib/hlquery/modules/*
 %{_unitdir}/hlquery.service
+%{_prefix}/lib/systemd/system-preset/80-hlquery.preset
 /etc/init.d/hlquery
 
 %changelog

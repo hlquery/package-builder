@@ -67,6 +67,34 @@ require_dpkg_package() {
     return 1
 }
 
+is_rpm_platform() {
+    if [ -r /etc/os-release ]; then
+        . /etc/os-release
+        case " ${ID:-} ${ID_LIKE:-} " in
+            *" fedora "*|*" rhel "*|*" centos "*|*" rocky "*|*" almalinux "*|*" suse "*|*" opensuse "*)
+                return 0
+                ;;
+        esac
+    fi
+
+    command -v dnf >/dev/null 2>&1 ||
+        command -v yum >/dev/null 2>&1 ||
+        command -v zypper >/dev/null 2>&1
+}
+
+is_debian_platform() {
+    if [ -r /etc/os-release ]; then
+        . /etc/os-release
+        case " ${ID:-} ${ID_LIKE:-} " in
+            *" debian "*|*" ubuntu "*)
+                return 0
+                ;;
+        esac
+    fi
+
+    command -v apt-get >/dev/null 2>&1
+}
+
 check_debian_build_dependencies() {
     MISSING_MESSAGES=()
 
@@ -77,7 +105,7 @@ check_debian_build_dependencies() {
     require_command dpkg-deb dpkg-dev || true
     require_command fakeroot fakeroot || true
 
-    if command -v dpkg >/dev/null 2>&1; then
+    if is_debian_platform && command -v dpkg >/dev/null 2>&1; then
         require_dpkg_package build-essential || true
         require_dpkg_package zlib1g-dev || true
         require_dpkg_package libssl-dev || true
@@ -112,18 +140,18 @@ check_rpm_build_dependencies() {
     require_command tar tar || true
     require_command gzip gzip || true
 
-    if command -v dpkg >/dev/null 2>&1; then
+    if is_rpm_platform && command -v rpm >/dev/null 2>&1; then
+        for package_name in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build systemd-rpm-macros tar gzip; do
+            if ! rpm -q "$package_name" >/dev/null 2>&1; then
+                MISSING_MESSAGES+=("Missing RPM package '$package_name'")
+            fi
+        done
+    elif is_debian_platform && command -v dpkg >/dev/null 2>&1; then
         require_dpkg_package build-essential || true
         require_dpkg_package zlib1g-dev || true
         require_dpkg_package libssl-dev || true
         require_dpkg_package cmake || true
         require_dpkg_package git || true
-    elif command -v rpm >/dev/null 2>&1; then
-        for package_name in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build tar gzip; do
-            if ! rpm -q "$package_name" >/dev/null 2>&1; then
-                MISSING_MESSAGES+=("Missing RPM package '$package_name'")
-            fi
-        done
     fi
 
     if [ "${#MISSING_MESSAGES[@]}" -eq 0 ]; then
@@ -138,7 +166,7 @@ check_rpm_build_dependencies() {
 
     if command -v dnf >/dev/null 2>&1; then
         log_info "Install them with:"
-        echo "  sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip"
+        echo "  sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip"
     else
         log_info "Install them with:"
         echo "  sudo apt-get update"
@@ -292,7 +320,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --type TYPE         Package type: deb, rpm, or all (default: all)"
+            echo "  --type TYPE         Package type: deb, rpm, or all (default: auto-detect)"
             echo "  --version VER        Package version (default: 1.0.0)"
             echo "  --git-version VER    Git branch/tag to clone (default: unstable)"
             echo "  --release REL        Package release (default: 1)"
@@ -308,9 +336,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Default to building all package types
+# Default to the native package type when the platform is clear.
 if [ -z "$PACKAGE_TYPE" ]; then
-    PACKAGE_TYPE="all"
+    if is_rpm_platform && ! is_debian_platform; then
+        PACKAGE_TYPE="rpm"
+    elif is_debian_platform && ! is_rpm_platform; then
+        PACKAGE_TYPE="deb"
+    else
+        PACKAGE_TYPE="all"
+    fi
 fi
 
 log_info "Building $PACKAGE_NAME version $VERSION"

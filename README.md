@@ -61,6 +61,7 @@ $ ./install-deps-debian.sh
 ### For RPM Packages
 
 - `rpm-build`
+- `systemd-rpm-macros`
 - `gcc-c++`
 - `make`
 - `openssl-devel`
@@ -72,7 +73,7 @@ $ ./install-deps-debian.sh
 
 Install on RedHat/CentOS/Fedora:
 ```bash
-$ sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip
+$ sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip
 ```
 
 Or use the bundled helper:
@@ -118,7 +119,7 @@ $ ./build.sh --clean
 
 ### Command-Line Options
 
-- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`)
+- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type)
 - `--version VER`: Package version (default: `1.0.0`)
 - `--git-version VER`: Git branch or tag to clone (default: `unstable`)
   - Examples: `unstable`, `1.0.0`, `v1.0.0`, `develop`
