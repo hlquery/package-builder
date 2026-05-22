@@ -35,6 +35,38 @@ validate_rpm_version() {
     fi
 }
 
+trim_value() {
+    local value="$1"
+
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s' "$value"
+}
+
+normalize_rpm_version() {
+    local raw_version normalized
+
+    raw_version="$(trim_value "$1")"
+
+    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_]*)$ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized RPM package version '$raw_version' to '$normalized' by dropping the leading v." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_]*)[[:space:]]+ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized RPM package version '$raw_version' to '$normalized'." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    printf '%s' "$raw_version"
+}
+
+VERSION="$(normalize_rpm_version "$VERSION")"
+RELEASE="$(trim_value "$RELEASE")"
 validate_rpm_version "$VERSION" "$RELEASE"
 
 case "$ARCH" in

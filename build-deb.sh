@@ -37,6 +37,36 @@ validate_debian_version() {
     fi
 }
 
+trim_value() {
+    local value="$1"
+
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s' "$value"
+}
+
+normalize_debian_version() {
+    local raw_version normalized
+
+    raw_version="$(trim_value "$1")"
+
+    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized Debian package version '$raw_version' to '$normalized' by dropping the leading v." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_-]*)[[:space:]]+ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized Debian package version '$raw_version' to '$normalized'." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    printf '%s' "$raw_version"
+}
+
 map_deb_arch() {
     case "$1" in
         x86_64|amd64)
@@ -57,6 +87,8 @@ map_deb_arch() {
     esac
 }
 
+VERSION="$(normalize_debian_version "$VERSION")"
+RELEASE="$(trim_value "$RELEASE")"
 validate_debian_version "$VERSION" "$RELEASE"
 
 DEB_ARCH="$(map_deb_arch "$ARCH")"
