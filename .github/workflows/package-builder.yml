@@ -9,7 +9,10 @@ on:
       - "build.sh"
       - "build-deb.sh"
       - "build-rpm.sh"
+      - "hlquery.init"
       - "hlquery.service"
+      - "install-deps-debian.sh"
+      - "install-deps-rpm.sh"
   pull_request:
     paths:
       - ".github/workflows/package-builder.yml"
@@ -18,7 +21,10 @@ on:
       - "build.sh"
       - "build-deb.sh"
       - "build-rpm.sh"
+      - "hlquery.init"
       - "hlquery.service"
+      - "install-deps-debian.sh"
+      - "install-deps-rpm.sh"
   workflow_dispatch:
 
 jobs:
@@ -68,7 +74,57 @@ jobs:
           test -n "$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
 
       - name: Upload Debian package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: package-builder-deb
           path: dist/*.deb
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            libbz2-dev \
+            liblz4-dev \
+            librocksdb-dev \
+            libsnappy-dev \
+            libssl-dev \
+            libzstd-dev \
+            pkg-config \
+            rpm \
+            zlib1g-dev
+
+      - name: Validate scripts
+        working-directory: .
+        run: |
+          bash -n build.sh
+          bash -n build-deb.sh
+          bash -n build-rpm.sh
+
+      - name: Build RPM package
+        working-directory: .
+        run: ./build.sh --type rpm --version 1.0.0 --release 1
+
+      - name: Verify package output
+        working-directory: .
+        run: |
+          ls -lh dist
+          test -n "$(find dist -maxdepth 1 -name '*.rpm' -print -quit)"
+
+      - name: Upload RPM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-builder-rpm
+          path: dist/*.rpm

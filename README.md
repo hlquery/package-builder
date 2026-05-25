@@ -7,9 +7,9 @@
 **Distribution packaging tools for hlquery, built for repeatable Debian and RPM releases.**
 
 [![Follow hlquery](https://img.shields.io/badge/Follow-%40hlquery-blue?logo=x&logoColor=white&labelColor=000000)](https://x.com/hlquery)
-[![Debian package](https://img.shields.io/badge/Debian-.deb-a81d33?logo=debian&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/actions/workflows/package-build.yml)
-[![RPM package](https://img.shields.io/badge/RPM-.rpm-d71920?logo=fedora&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/actions/workflows/package-build.yml)
-[![hlquery](https://img.shields.io/badge/GitHub-hlquery-blue?logo=github&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/)
+[![Debian package](https://img.shields.io/badge/Debian-.deb-a81d33?logo=debian&logoColor=white&labelColor=000000)](https://github.com/hlquery/package-builder/actions/workflows/package-builder.yml)
+[![RPM package](https://img.shields.io/badge/RPM-.rpm-d71920?logo=fedora&logoColor=white&labelColor=000000)](https://github.com/hlquery/package-builder/actions/workflows/package-builder.yml)
+[![Package Builder](https://img.shields.io/badge/GitHub-package--builder-blue?logo=github&logoColor=white&labelColor=000000)](https://github.com/hlquery/package-builder/)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-a35a0f?logo=open-source-initiative&logoColor=white&labelColor=000000)](https://opensource.org/licenses/BSD-3-Clause)
 
 </div>
@@ -24,13 +24,27 @@ The package builder clones the requested hlquery branch or tag, builds the sourc
 
 Use the package builder when you need reproducible installable artifacts for Debian, Ubuntu, Fedora, RHEL-compatible systems, or other RPM-based distributions. It keeps the build, staging, service files, package metadata, and install scripts in one place instead of requiring manual packaging steps.
 
-### Building All Package Types
+### Building Native Package Type
 
 ```bash
 ./build.sh
 ```
 
-This will build both Debian and RPM packages in the `dist/` directory.
+By default, `build.sh` auto-detects the current platform and builds the native
+package type in the `dist/` directory:
+
+- Debian/Ubuntu systems build a `.deb`
+- Fedora/RHEL-compatible systems build an `.rpm`
+- Ambiguous or mixed environments build both package types
+
+### Building All Package Types
+
+```bash
+./build.sh --type all
+```
+
+Use `--type all` when you want to build both Debian and RPM packages in the
+`dist/` directory.
 
 ### Building Specific Package Types
 
@@ -121,7 +135,7 @@ $ ./build.sh --clean
 
 ### Command-Line Options
 
-- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type)
+- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type). Use `--type all` to build both `.deb` and `.rpm` packages.
 - `--version VER`: Package version (default: `1.0.0`)
   - Use package-safe values such as `1.0.0` or `1.0.0~rc1`; do not use OS release text such as `24.04.4 LTS (Noble Numbat)`
 - `--git-version VER`: Git branch or tag to clone (default: `unstable`)
@@ -267,5 +281,5 @@ rpm -qlp dist/hlquery-1.0.0-1.x86_64.rpm
 
 For issues or questions:
 
-- [GitHub Issues](https://github.com/hlquery/hlquery/issues)
+- [GitHub Issues](https://github.com/hlquery/package-builder/issues)
 - [Documentation](https://docs.hlquery.com)
