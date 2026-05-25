@@ -60,14 +60,6 @@ make clean
 
 ### For Debian Packages
 
-- `build-essential`
-- `zlib1g-dev`
-- `libssl-dev`
-- `dpkg-dev`
-- `fakeroot` (recommended for proper file ownership)
-- `cmake`
-- `git`
-
 Install on Debian/Ubuntu:
 ```bash
 $ sudo apt-get update
@@ -80,18 +72,6 @@ $ ./install-deps-debian.sh
 ```
 
 ### For RPM Packages
-
-- `rpm-build`
-- `gcc-c++`
-- `make`
-- `openssl-devel`
-- `zlib-devel`
-- `cmake`
-- `git`
-- `tar`
-- `gzip`
-- `perl`
-- `perl(File::Copy)`
 
 Install on RedHat/CentOS/Fedora:
 ```bash

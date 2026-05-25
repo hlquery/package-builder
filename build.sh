@@ -139,7 +139,15 @@ require_perl_module() {
 
 is_rpm_platform() {
     if [ -r /etc/os-release ]; then
+        local ID=""
+        local ID_LIKE=""
+        local NAME=""
+        local PRETTY_NAME=""
+        local VERSION=""
+        local VERSION_ID=""
+
         . /etc/os-release
+
         case " ${ID:-} ${ID_LIKE:-} " in
             *" fedora "*|*" rhel "*|*" centos "*|*" rocky "*|*" almalinux "*|*" suse "*|*" opensuse "*)
                 return 0
@@ -154,7 +162,15 @@ is_rpm_platform() {
 
 is_debian_platform() {
     if [ -r /etc/os-release ]; then
+        local ID=""
+        local ID_LIKE=""
+        local NAME=""
+        local PRETTY_NAME=""
+        local VERSION=""
+        local VERSION_ID=""
+
         . /etc/os-release
+
         case " ${ID:-} ${ID_LIKE:-} " in
             *" debian "*|*" ubuntu "*)
                 return 0
