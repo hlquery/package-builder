@@ -1,7 +1,28 @@
-### Package Builder for hlquery
+<div align="center">
+  <img src="https://docs.hlquery.com/img/hlquery/2.png" alt="hlquery logo" width="200">
+</div>
+
+<div align="center">
+
+**Distribution packaging tools for hlquery, built for repeatable Debian and RPM releases.**
+
+[![Follow hlquery](https://img.shields.io/badge/Follow-%40hlquery-blue?logo=x&logoColor=white&labelColor=000000)](https://x.com/hlquery)
+[![Debian package](https://img.shields.io/badge/Debian-.deb-a81d33?logo=debian&logoColor=white&labelColor=000000)](https://www.debian.org/doc/manuals/maint-guide/)
+[![RPM package](https://img.shields.io/badge/RPM-.rpm-d71920?logo=fedora&logoColor=white&labelColor=000000)](https://rpm.org/)
+[![hlquery](https://img.shields.io/badge/GitHub-hlquery-blue?logo=github&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-a35a0f?logo=open-source-initiative&logoColor=white&labelColor=000000)](https://opensource.org/licenses/BSD-3-Clause)
+
+</div>
+
+### What is the hlquery Package Builder?
 
 **Search beyond keywords** - This directory contains scripts and configuration files for building distribution packages (Debian `.deb` and RPM `.rpm`) for hlquery.
 
+The package builder clones the requested hlquery branch or tag, builds the source tree with the selected package layout, stages an install tree, and produces native packages in `dist/`.
+
+### Why use it?
+
+Use the package builder when you need reproducible installable artifacts for Debian, Ubuntu, Fedora, RHEL-compatible systems, or other RPM-based distributions. It keeps the build, staging, service files, package metadata, and install scripts in one place instead of requiring manual packaging steps.
 
 ### Building All Package Types
 
@@ -70,10 +91,12 @@ $ ./install-deps-debian.sh
 - `git`
 - `tar`
 - `gzip`
+- `perl`
+- `perl(File::Copy)`
 
 Install on RedHat/CentOS/Fedora:
 ```bash
-$ sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip
+$ sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'
 ```
 
 Or use the bundled helper:

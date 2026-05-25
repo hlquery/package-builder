@@ -121,6 +121,29 @@ require_dpkg_package() {
     return 1
 }
 
+require_rpm_capability() {
+    local capability="$1"
+
+    if rpm -q --whatprovides "$capability" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    MISSING_MESSAGES+=("Missing RPM package or provider '$capability'")
+    return 1
+}
+
+require_perl_module() {
+    local module_name="$1"
+    local package_hint="$2"
+
+    if perl -M"$module_name" -e 1 >/dev/null 2>&1; then
+        return 0
+    fi
+
+    MISSING_MESSAGES+=("Missing Perl module '$module_name'${package_hint:+ (package: $package_hint)}")
+    return 1
+}
+
 is_rpm_platform() {
     if [ -r /etc/os-release ]; then
         . /etc/os-release
@@ -193,12 +216,12 @@ check_rpm_build_dependencies() {
     require_command rpmbuild rpm-build || true
     require_command tar tar || true
     require_command gzip gzip || true
+    require_command perl perl || true
+    require_perl_module File::Copy perl-File-Copy || true
 
     if is_rpm_platform && command -v rpm >/dev/null 2>&1; then
-        for package_name in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build systemd-rpm-macros tar gzip; do
-            if ! rpm -q "$package_name" >/dev/null 2>&1; then
-                MISSING_MESSAGES+=("Missing RPM package '$package_name'")
-            fi
+        for capability in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build systemd-rpm-macros tar gzip perl 'perl(File::Copy)'; do
+            require_rpm_capability "$capability" || true
         done
     elif is_debian_platform && command -v dpkg >/dev/null 2>&1; then
         require_dpkg_package build-essential || true
@@ -220,7 +243,7 @@ check_rpm_build_dependencies() {
 
     if command -v dnf >/dev/null 2>&1; then
         log_info "Install them with:"
-        echo "  sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip"
+        echo "  sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'"
     else
         log_info "Install them with:"
         echo "  sudo apt-get update"
