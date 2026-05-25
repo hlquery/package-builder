@@ -166,14 +166,30 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
-if command -v systemctl >/dev/null 2>&1; then
+warn_service_start_failed() {
+    echo "Warning: hlquery service did not start during package installation." >&2
+    echo "Inspect with: systemctl status hlquery.service || journalctl -u hlquery.service -n 80 --no-pager" >&2
+}
+
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f %{_unitdir}/hlquery.service ]; then
     systemctl daemon-reload >/dev/null 2>&1 || true
     systemctl preset hlquery.service >/dev/null 2>&1 || true
+    systemctl enable hlquery.service >/dev/null 2>&1 || true
+    if systemctl start hlquery.service >/dev/null 2>&1; then
+        echo "hlquery service started."
+    else
+        warn_service_start_failed
+    fi
 fi
 if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
         chkconfig hlquery on >/dev/null 2>&1 || true
+    fi
+    if /etc/init.d/hlquery start >/dev/null 2>&1; then
+        echo "hlquery service started."
+    else
+        warn_service_start_failed
     fi
 fi
 

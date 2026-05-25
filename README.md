@@ -7,8 +7,8 @@
 **Distribution packaging tools for hlquery, built for repeatable Debian and RPM releases.**
 
 [![Follow hlquery](https://img.shields.io/badge/Follow-%40hlquery-blue?logo=x&logoColor=white&labelColor=000000)](https://x.com/hlquery)
-[![Debian package](https://img.shields.io/badge/Debian-.deb-a81d33?logo=debian&logoColor=white&labelColor=000000)](https://www.debian.org/doc/manuals/maint-guide/)
-[![RPM package](https://img.shields.io/badge/RPM-.rpm-d71920?logo=fedora&logoColor=white&labelColor=000000)](https://rpm.org/)
+[![Debian package](https://img.shields.io/badge/Debian-.deb-a81d33?logo=debian&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/actions/workflows/package-build.yml)
+[![RPM package](https://img.shields.io/badge/RPM-.rpm-d71920?logo=fedora&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/actions/workflows/package-build.yml)
 [![hlquery](https://img.shields.io/badge/GitHub-hlquery-blue?logo=github&logoColor=white&labelColor=000000)](https://github.com/hlquery/hlquery/)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-a35a0f?logo=open-source-initiative&logoColor=white&labelColor=000000)](https://opensource.org/licenses/BSD-3-Clause)
 

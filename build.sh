@@ -23,7 +23,7 @@ GIT_VERSION="${GIT_VERSION:-unstable}"
 RELEASE="${RELEASE:-1}"
 ARCH="${ARCH:-$(uname -m)}"
 BUILD_MODE="${BUILD_MODE:-release}"
-GIT_REPO="https://github.com/hlquery/hlquery.git"
+GIT_REPO="${GIT_REPO:-https://github.com/hlquery/hlquery.git}"
 
 # Package metadata
 PACKAGE_NAME="hlquery"
