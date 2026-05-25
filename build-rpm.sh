@@ -55,13 +55,6 @@ normalize_rpm_version() {
         return 0
     fi
 
-    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_]*)[[:space:]]+ ]]; then
-        normalized="${BASH_REMATCH[1]}"
-        echo "Warning: normalized RPM package version '$raw_version' to '$normalized'." >&2
-        printf '%s' "$normalized"
-        return 0
-    fi
-
     printf '%s' "$raw_version"
 }
 
@@ -114,7 +107,6 @@ License:        BSD-3-Clause
 URL:            $URL
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      $RPM_ARCH
-BuildRequires:  systemd-rpm-macros
 Requires:       perl
 Requires(pre):  shadow-utils
 Requires(post): systemd
@@ -174,7 +166,10 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
-%systemd_post hlquery.service
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl preset hlquery.service >/dev/null 2>&1 || true
+fi
 if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
@@ -183,7 +178,9 @@ if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
 fi
 
 %preun
-%systemd_preun hlquery.service
+if [ "\$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+    systemctl --no-reload disable --now hlquery.service >/dev/null 2>&1 || true
+fi
 if [ "\$1" -eq 0 ] && ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --del hlquery >/dev/null 2>&1 || true
@@ -191,7 +188,12 @@ if [ "\$1" -eq 0 ] && ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d
 fi
 
 %postun
-%systemd_postun_with_restart hlquery.service
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ "\$1" -ge 1 ]; then
+        systemctl try-restart hlquery.service >/dev/null 2>&1 || true
+    fi
+fi
 
 %files
 %defattr(-,root,root,-)
@@ -207,14 +209,13 @@ fi
 %verify(not user group) %dir /var/log/hlquery
 %verify(not user group) %dir /run/hlquery
 %dir %{_prefix}/lib/hlquery
-%dir %{_prefix}/lib/hlquery/modules
-%{_prefix}/lib/hlquery/modules/*
+%{_prefix}/lib/hlquery/modules
 %{_unitdir}/hlquery.service
 %{_prefix}/lib/systemd/system-preset/80-hlquery.preset
 /etc/init.d/hlquery
 
 %changelog
-* $(date '+%a %b %d %Y') $MAINTAINER - $VERSION-$RELEASE
+* $(LC_ALL=C date '+%a %b %d %Y') $MAINTAINER - $VERSION-$RELEASE
 - Initial package release
 EOF
 

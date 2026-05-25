@@ -64,13 +64,6 @@ normalize_package_version() {
         return 0
     fi
 
-    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_-]*)[[:space:]]+ ]]; then
-        normalized="${BASH_REMATCH[1]}"
-        log_warn "Normalized package version '$raw_version' to '$normalized'." >&2
-        printf '%s' "$normalized"
-        return 0
-    fi
-
     printf '%s' "$raw_version"
 }
 
@@ -220,7 +213,7 @@ check_rpm_build_dependencies() {
     require_perl_module File::Copy perl-File-Copy || true
 
     if is_rpm_platform && command -v rpm >/dev/null 2>&1; then
-        for capability in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build systemd-rpm-macros tar gzip perl 'perl(File::Copy)'; do
+        for capability in gcc-c++ make openssl-devel zlib-devel cmake git rpm-build tar gzip perl 'perl(File::Copy)'; do
             require_rpm_capability "$capability" || true
         done
     elif is_debian_platform && command -v dpkg >/dev/null 2>&1; then
@@ -243,7 +236,7 @@ check_rpm_build_dependencies() {
 
     if command -v dnf >/dev/null 2>&1; then
         log_info "Install them with:"
-        echo "  sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'"
+        echo "  sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'"
     else
         log_info "Install them with:"
         echo "  sudo apt-get update"

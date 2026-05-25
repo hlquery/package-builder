@@ -82,7 +82,6 @@ $ ./install-deps-debian.sh
 ### For RPM Packages
 
 - `rpm-build`
-- `systemd-rpm-macros`
 - `gcc-c++`
 - `make`
 - `openssl-devel`
@@ -96,7 +95,7 @@ $ ./install-deps-debian.sh
 
 Install on RedHat/CentOS/Fedora:
 ```bash
-$ sudo dnf install rpm-build systemd-rpm-macros gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'
+$ sudo dnf install rpm-build gcc-c++ make openssl-devel zlib-devel cmake git tar gzip perl 'perl(File::Copy)'
 ```
 
 Or use the bundled helper:
