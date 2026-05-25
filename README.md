@@ -50,24 +50,24 @@ Use `--type all` when you want to build both Debian and RPM packages in the
 
 ```bash
 # Build only Debian package
-./build.sh --type deb
+$ ./build.sh --type deb
 
 # Build only RPM package
-./build.sh --type rpm
+$ ./build.sh --type rpm
 ```
 
 ### Using Make
 
 ```bash
 ### Build all packages
-make
+$ make
 
 ### Build specific package type
-make deb
-make rpm
+$ make deb
+$ make rpm
 
 ### Clean build directories
-make clean
+$ make clean
 ```
 
 ### Requirements
@@ -271,10 +271,10 @@ Check package contents:
 
 ```bash
 # Debian
-dpkg -c dist/hlquery_1.0.0-1_amd64.deb
+$ dpkg -c dist/hlquery_1.0.0-1_amd64.deb
 
 # RPM
-rpm -qlp dist/hlquery-1.0.0-1.x86_64.rpm
+$ rpm -qlp dist/hlquery-1.0.0-1.x86_64.rpm
 ```
 
 ## Support
