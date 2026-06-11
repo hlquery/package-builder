@@ -220,7 +220,6 @@ if [ -f /etc/hlquery/hlquery.conf ]; then
         -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
         -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
         -e 's|target="queries.log"|target="/var/log/hlquery/queries.log"|g' \
-        -e 's|target="sam.log"|target="/var/log/hlquery/sam.log"|g' \
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi

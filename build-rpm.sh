@@ -157,12 +157,11 @@ if [ -f /etc/hlquery/hlquery.conf ] &&
     sed -i '/<llm/,/>/ s/enabled="true"/enabled="false"/' /etc/hlquery/hlquery.conf
 fi
 if [ -f /etc/hlquery/hlquery.conf ] &&
-   grep -Eq 'target="(hlquery|database|queries|sam|links)\.log"' /etc/hlquery/hlquery.conf; then
+   grep -Eq 'target="(hlquery|database|queries|links)\.log"' /etc/hlquery/hlquery.conf; then
     sed -i \
         -e 's|target="hlquery.log"|target="/var/log/hlquery/hlquery.log"|g' \
         -e 's|target="database.log"|target="/var/log/hlquery/database.log"|g' \
         -e 's|target="queries.log"|target="/var/log/hlquery/queries.log"|g' \
-        -e 's|target="sam.log"|target="/var/log/hlquery/sam.log"|g' \
         -e 's|target="links.log"|target="/var/log/hlquery/links.log"|g' \
         /etc/hlquery/hlquery.conf
 fi
