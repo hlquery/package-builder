@@ -77,8 +77,10 @@ $ make clean
 Install on Debian/Ubuntu:
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install build-essential zlib1g-dev libssl-dev dpkg-dev fakeroot cmake git
+$ sudo apt-get install build-essential zlib1g-dev libssl-dev liburing-dev dpkg-dev fakeroot cmake git
 ```
+
+If CMake prints a `uring` lookup warning while building RocksDB, `liburing-dev` is the package that usually fixes it. It installs the development files CMake looks for when optional `io_uring` support is enabled.
 
 Or use the bundled helper:
 ```bash
@@ -259,7 +261,7 @@ Install required build tools:
 
 ```bash
 # Debian/Ubuntu
-sudo apt-get install dpkg-dev fakeroot rpm-build
+sudo apt-get install dpkg-dev fakeroot rpm-build liburing-dev
 
 # RedHat/CentOS/Fedora
 sudo dnf install rpm-build dpkg-dev
