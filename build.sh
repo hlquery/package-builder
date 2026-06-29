@@ -57,6 +57,13 @@ normalize_package_version() {
 
     raw_version="$(trim_value "$1")"
 
+    if [[ "$raw_version" =~ ^hlquery-([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        log_warn "Normalized package version '$raw_version' to '$normalized' by dropping the package name." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
     if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
         normalized="${BASH_REMATCH[1]}"
         log_warn "Normalized package version '$raw_version' to '$normalized' by dropping the leading v." >&2
@@ -70,12 +77,12 @@ normalize_package_version() {
 validate_package_version() {
     local version="$1"
 
-    if [[ "$version" =~ ^[0-9][A-Za-z0-9.+~_]*$ ]]; then
+    if [[ "$version" =~ ^[0-9][A-Za-z0-9.+~_-]*$ ]]; then
         return 0
     fi
 
     log_error "Invalid package version '$version'."
-    log_error "Use a package version such as '1.0.0' or '1.0.0~rc1'. Do not use OS release text like '24.04.4 LTS (Noble Numbat)'."
+    log_error "Use a package version such as '1.0.0', '1.0.0-rc1', or '1.0.0~rc1'. Do not use OS release text like '24.04.4 LTS (Noble Numbat)'."
     exit 1
 }
 

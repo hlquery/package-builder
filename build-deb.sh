@@ -45,26 +45,52 @@ trim_value() {
     printf '%s' "$value"
 }
 
-normalize_debian_version() {
+canonicalize_display_version() {
     local raw_version normalized
 
     raw_version="$(trim_value "$1")"
 
-    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
+    if [[ "$raw_version" =~ ^hlquery-([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
         normalized="${BASH_REMATCH[1]}"
-        echo "Warning: normalized Debian package version '$raw_version' to '$normalized' by dropping the leading v." >&2
+        echo "Warning: normalized package artifact version '$raw_version' to '$normalized' by dropping the package name." >&2
         printf '%s' "$normalized"
         return 0
     fi
 
-    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_-]*)[[:space:]]+ ]]; then
+    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
         normalized="${BASH_REMATCH[1]}"
-        echo "Warning: normalized Debian package version '$raw_version' to '$normalized'." >&2
+        echo "Warning: normalized package artifact version '$raw_version' to '$normalized' by dropping the leading v." >&2
         printf '%s' "$normalized"
         return 0
     fi
 
     printf '%s' "$raw_version"
+}
+
+normalize_debian_version() {
+    local raw_version normalized
+
+    raw_version="$(trim_value "$1")"
+
+    if [[ "$raw_version" =~ ^([0-9][A-Za-z0-9.+~_-]*)[[:space:]]+ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized Debian package version '$raw_version' to '$normalized'." >&2
+        raw_version="$normalized"
+    fi
+
+    normalized="${raw_version//-/\~}"
+    if [ "$normalized" != "$raw_version" ]; then
+        echo "Warning: normalized Debian metadata version '$raw_version' to '$normalized' because Debian package versions cannot contain hyphens." >&2
+    fi
+
+    printf '%s' "$normalized"
+}
+
+artifact_version() {
+    local raw_version
+
+    raw_version="$(trim_value "$1")"
+    printf '%s' "${raw_version//~/-}"
 }
 
 map_deb_arch() {
@@ -87,7 +113,9 @@ map_deb_arch() {
     esac
 }
 
-VERSION="$(normalize_debian_version "$VERSION")"
+DISPLAY_VERSION="$(canonicalize_display_version "$VERSION")"
+VERSION="$(normalize_debian_version "$DISPLAY_VERSION")"
+ARTIFACT_VERSION="$(artifact_version "$DISPLAY_VERSION")"
 RELEASE="$(trim_value "$RELEASE")"
 validate_debian_version "$VERSION" "$RELEASE"
 
@@ -320,7 +348,8 @@ if dpkg_root_owner_group_supported; then
     DPKG_DEB_ARGS+=(--root-owner-group)
 fi
 
-dpkg-deb "${DPKG_DEB_ARGS[@]}" --build "$DEB_DIR" "$DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+DEB_PACKAGE_PATH="$DIST_DIR/${PACKAGE_NAME}_${ARTIFACT_VERSION}_${DEB_ARCH}.deb"
+dpkg-deb "${DPKG_DEB_ARGS[@]}" --build "$DEB_DIR" "$DEB_PACKAGE_PATH"
 
 cat > "$DIST_DIR/install-${PACKAGE_NAME}-deb.sh" <<EOF
 #!/bin/sh
@@ -328,7 +357,7 @@ set -e
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:\${PATH:-}"
 
-PACKAGE_PATH="\$(dirname "\$0")/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+PACKAGE_PATH="\$(dirname "\$0")/${PACKAGE_NAME}_${ARTIFACT_VERSION}_${DEB_ARCH}.deb"
 
 if [ "\$(id -u)" -ne 0 ]; then
     exec sudo env PATH="\$PATH" dpkg -i "\$PACKAGE_PATH"
@@ -338,5 +367,5 @@ exec dpkg -i "\$PACKAGE_PATH"
 EOF
 chmod 0755 "$DIST_DIR/install-${PACKAGE_NAME}-deb.sh"
 
-echo "Debian package built: $DIST_DIR/${PACKAGE_NAME}_${VERSION}-${RELEASE}_${DEB_ARCH}.deb"
+echo "Debian package built: $DEB_PACKAGE_PATH"
 echo "Install helper built: $DIST_DIR/install-${PACKAGE_NAME}-deb.sh"

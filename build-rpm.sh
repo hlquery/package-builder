@@ -1,6 +1,10 @@
 #!/bin/bash
 # Build RPM package for hlquery from a staged install tree
 
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
+
 set -e
 
 INSTALL_DIR="$1"
@@ -18,6 +22,21 @@ PACKAGE_NAME="hlquery"
 MAINTAINER="${MAINTAINER:-Carlos F. Ferry <carlos.ferry@gmail.com>}"
 DESCRIPTION="Search beyond keywords - High-performance search engine with RocksDB storage"
 URL="https://www.hlquery.com"
+
+usage() {
+    echo "Usage: $0 INSTALL_DIR VERSION RELEASE ARCH" >&2
+    echo "Example: $0 build/install-rpm 1.0.0 1 x86_64" >&2
+    echo "Tip: use './build.sh --type rpm' to build and stage hlquery automatically." >&2
+}
+
+if [ "$#" -eq 0 ]; then
+    exec "$PACKAGE_DIR/build.sh" --type rpm
+fi
+
+if [ "$#" -ne 4 ]; then
+    usage
+    exit 1
+fi
 
 validate_rpm_version() {
     local version="$1"
@@ -43,14 +62,21 @@ trim_value() {
     printf '%s' "$value"
 }
 
-normalize_rpm_version() {
+canonicalize_display_version() {
     local raw_version normalized
 
     raw_version="$(trim_value "$1")"
 
-    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_]*)$ ]]; then
+    if [[ "$raw_version" =~ ^hlquery-([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
         normalized="${BASH_REMATCH[1]}"
-        echo "Warning: normalized RPM package version '$raw_version' to '$normalized' by dropping the leading v." >&2
+        echo "Warning: normalized package artifact version '$raw_version' to '$normalized' by dropping the package name." >&2
+        printf '%s' "$normalized"
+        return 0
+    fi
+
+    if [[ "$raw_version" =~ ^v([0-9][A-Za-z0-9.+~_-]*)$ ]]; then
+        normalized="${BASH_REMATCH[1]}"
+        echo "Warning: normalized package artifact version '$raw_version' to '$normalized' by dropping the leading v." >&2
         printf '%s' "$normalized"
         return 0
     fi
@@ -58,7 +84,29 @@ normalize_rpm_version() {
     printf '%s' "$raw_version"
 }
 
-VERSION="$(normalize_rpm_version "$VERSION")"
+normalize_rpm_version() {
+    local raw_version normalized
+
+    raw_version="$(trim_value "$1")"
+
+    normalized="${raw_version//-/\~}"
+    if [ "$normalized" != "$raw_version" ]; then
+        echo "Warning: normalized RPM metadata version '$raw_version' to '$normalized' because RPM package versions cannot contain hyphens." >&2
+    fi
+
+    printf '%s' "$normalized"
+}
+
+artifact_version() {
+    local raw_version
+
+    raw_version="$(trim_value "$1")"
+    printf '%s' "${raw_version//~/-}"
+}
+
+DISPLAY_VERSION="$(canonicalize_display_version "$VERSION")"
+VERSION="$(normalize_rpm_version "$DISPLAY_VERSION")"
+ARTIFACT_VERSION="$(artifact_version "$DISPLAY_VERSION")"
 RELEASE="$(trim_value "$RELEASE")"
 validate_rpm_version "$VERSION" "$RELEASE"
 
@@ -248,8 +296,8 @@ rpmbuild --define "_topdir $RPMBUILD_DIR" \
 
 RPM_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME}-${VERSION}-${RELEASE}*.${RPM_ARCH}.rpm" | head -1)
 if [ -n "$RPM_FILE" ]; then
-    mv "$RPM_FILE" "$DIST_DIR/${PACKAGE_NAME}-${VERSION}-${RELEASE}.${RPM_ARCH}.rpm"
-    echo "RPM package built: $DIST_DIR/${PACKAGE_NAME}-${VERSION}-${RELEASE}.${RPM_ARCH}.rpm"
+    mv "$RPM_FILE" "$DIST_DIR/${PACKAGE_NAME}-${ARTIFACT_VERSION}.${RPM_ARCH}.rpm"
+    echo "RPM package built: $DIST_DIR/${PACKAGE_NAME}-${ARTIFACT_VERSION}.${RPM_ARCH}.rpm"
 else
     echo "RPM package built in: $DIST_DIR"
     find "$DIST_DIR" -name "*.rpm"
