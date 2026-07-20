@@ -19,6 +19,9 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/bin/hlquery --nofork --config /etc/hlquery/hlquery.conf
 Restart=on-failure
 RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=90
+UMask=0077
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hlquery
@@ -28,6 +31,19 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+PrivateDevices=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 ReadWritePaths=/var/lib/hlquery /var/log/hlquery
 
 # Resource limits
