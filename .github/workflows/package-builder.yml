@@ -11,6 +11,7 @@ on:
       - "build-rpm.sh"
       - "hlquery.init"
       - "hlquery.service"
+      - "tests/service-init-smoke.sh"
       - "install-deps-debian.sh"
       - "install-deps-rpm.sh"
   pull_request:
@@ -23,6 +24,7 @@ on:
       - "build-rpm.sh"
       - "hlquery.init"
       - "hlquery.service"
+      - "tests/service-init-smoke.sh"
       - "install-deps-debian.sh"
       - "install-deps-rpm.sh"
   workflow_dispatch:
@@ -62,6 +64,7 @@ jobs:
           bash -n build.sh
           bash -n build-deb.sh
           bash -n build-rpm.sh
+          ./tests/service-init-smoke.sh
 
       - name: Build Debian package
         working-directory: .
@@ -112,6 +115,7 @@ jobs:
           bash -n build.sh
           bash -n build-deb.sh
           bash -n build-rpm.sh
+          ./tests/service-init-smoke.sh
 
       - name: Build RPM package
         working-directory: .

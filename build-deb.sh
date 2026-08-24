@@ -219,19 +219,38 @@ set -e
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-# Create user if it doesn't exist
+# Create the service group and user if they do not exist.
+if ! getent group hlquery >/dev/null 2>&1; then
+    if command -v groupadd >/dev/null 2>&1; then
+        groupadd -r hlquery
+    elif command -v addgroup >/dev/null 2>&1; then
+        addgroup --system hlquery
+    fi
+fi
+
 if ! id -u hlquery >/dev/null 2>&1; then
     if command -v useradd >/dev/null 2>&1; then
-        useradd -r -s /usr/sbin/nologin -d /var/lib/hlquery hlquery || true
+        useradd -r -g hlquery -s /usr/sbin/nologin -d /var/lib/hlquery hlquery
     elif command -v adduser >/dev/null 2>&1; then
-        adduser --system --group --home /var/lib/hlquery --no-create-home --disabled-login hlquery || true
+        adduser --system --ingroup hlquery --home /var/lib/hlquery --no-create-home --disabled-login hlquery
     fi
+elif ! id -nG hlquery | tr ' ' '\n' | grep -qx hlquery; then
+    usermod -a -G hlquery hlquery
 fi
 
 # Ensure runtime directories exist before first start
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
+
+# Configuration can contain credentials. Keep it readable by the service user
+# without exposing it to unrelated local users.
+if [ -d /etc/hlquery ]; then
+    chown root:hlquery /etc/hlquery
+    chmod 750 /etc/hlquery
+    find /etc/hlquery -maxdepth 1 -type f -exec chown root:hlquery {} \;
+    find /etc/hlquery -maxdepth 1 -type f -exec chmod 640 {} \;
+fi
 
 # Older packages shipped a development LLM config that points at run/models.
 # dpkg preserves conffiles on reinstall, so normalize that unsafe default before
@@ -318,7 +337,7 @@ set -e
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-if command -v systemctl >/dev/null 2>&1 && [ -f /lib/systemd/system/hlquery.service ]; then
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true
     if [ "$1" = "purge" ] && command -v deb-systemd-helper >/dev/null 2>&1; then
         deb-systemd-helper purge hlquery.service >/dev/null || true

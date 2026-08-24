@@ -190,14 +190,25 @@ if [ -f %{_sourcedir}/hlquery.init ]; then
 fi
 
 %pre
+if ! getent group hlquery >/dev/null 2>&1; then
+    groupadd -r hlquery
+fi
 if ! id -u hlquery >/dev/null 2>&1; then
-    useradd -r -s /sbin/nologin -d /var/lib/hlquery hlquery || true
+    useradd -r -g hlquery -s /sbin/nologin -d /var/lib/hlquery hlquery
+elif ! id -nG hlquery | tr ' ' '\n' | grep -qx hlquery; then
+    usermod -a -G hlquery hlquery
 fi
 
 %post
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
 chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
+if [ -d /etc/hlquery ]; then
+    chown root:hlquery /etc/hlquery
+    chmod 750 /etc/hlquery
+    find /etc/hlquery -maxdepth 1 -type f -exec chown root:hlquery {} \;
+    find /etc/hlquery -maxdepth 1 -type f -exec chmod 640 {} \;
+fi
 if [ -f /etc/hlquery/hlquery.conf ] &&
    grep -A4 '<llm' /etc/hlquery/hlquery.conf | grep -q 'enabled="true"' &&
    grep -q 'models_dir="run/models"' /etc/hlquery/hlquery.conf &&
@@ -228,7 +239,7 @@ if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f %{
         warn_service_start_failed
     fi
 fi
-if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
+if { ! command -v systemctl >/dev/null 2>&1 || [ ! -d /run/systemd/system ]; } && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --add hlquery >/dev/null 2>&1 || true
         chkconfig hlquery on >/dev/null 2>&1 || true
@@ -241,17 +252,17 @@ if ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
 fi
 
 %preun
-if [ "\$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+if [ "\$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     systemctl --no-reload disable --now hlquery.service >/dev/null 2>&1 || true
 fi
-if [ "\$1" -eq 0 ] && ! command -v systemctl >/dev/null 2>&1 && [ -x /etc/init.d/hlquery ]; then
+if [ "\$1" -eq 0 ] && { ! command -v systemctl >/dev/null 2>&1 || [ ! -d /run/systemd/system ]; } && [ -x /etc/init.d/hlquery ]; then
     if command -v chkconfig >/dev/null 2>&1; then
         chkconfig --del hlquery >/dev/null 2>&1 || true
     fi
 fi
 
 %postun
-if command -v systemctl >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     systemctl daemon-reload >/dev/null 2>&1 || true
     if [ "\$1" -ge 1 ]; then
         systemctl try-restart hlquery.service >/dev/null 2>&1 || true
@@ -266,8 +277,8 @@ fi
 %{_bindir}/hlquery-talk
 %{_bindir}/hlquery-wrapper
 %{_bindir}/hlqueryctl
-%dir %{_sysconfdir}/hlquery
-%config(noreplace) %{_sysconfdir}/hlquery/*
+%attr(0755,root,root) %dir %{_sysconfdir}/hlquery
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/hlquery/*
 %verify(not user group) %dir /var/lib/hlquery
 %verify(not user group) %dir /var/log/hlquery
 %verify(not user group) %dir /run/hlquery

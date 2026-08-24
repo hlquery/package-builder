@@ -19,7 +19,7 @@ BUILD_DIR="$PACKAGE_DIR/build"
 DIST_DIR="$PACKAGE_DIR/dist"
 SOURCE_DIR="$BUILD_DIR/hlquery-src"
 VERSION="${VERSION:-1.0.0}"
-GIT_VERSION="${GIT_VERSION:-unstable}"
+GIT_VERSION="${GIT_VERSION:-1.0}"
 RELEASE="${RELEASE:-1}"
 ARCH="${ARCH:-$(uname -m)}"
 BUILD_MODE="${BUILD_MODE:-release}"
@@ -293,17 +293,19 @@ resolve_checkout_ref() {
     local requested_ref="$1"
     local fallback_ref
 
-    if git rev-parse --verify --quiet "$requested_ref^{commit}" >/dev/null; then
-        echo "$requested_ref"
-        return 0
-    fi
-
+    # Prefer the freshly fetched remote branch over a possibly stale local
+    # branch left behind by an earlier package build.
     if git show-ref --verify --quiet "refs/remotes/origin/$requested_ref"; then
         echo "origin/$requested_ref"
         return 0
     fi
 
     if git show-ref --verify --quiet "refs/tags/$requested_ref"; then
+        echo "$requested_ref"
+        return 0
+    fi
+
+    if git rev-parse --verify --quiet "$requested_ref^{commit}" >/dev/null; then
         echo "$requested_ref"
         return 0
     fi
@@ -326,6 +328,15 @@ update_source_checkout() {
 
     git fetch --tags origin "+refs/heads/*:refs/remotes/origin/*"
 
+    # SOURCE_DIR lives below package-builder/build and is a disposable cache.
+    # Configure and make leave generated files there which can otherwise block
+    # switching between release branches or tags on the next package build.
+    if [ -n "$(git status --porcelain)" ]; then
+        log_info "Cleaning generated files from cached source checkout..."
+    fi
+    git reset --hard HEAD >/dev/null
+    git clean -ffdx >/dev/null
+
     checkout_ref="$(resolve_checkout_ref "$requested_ref")" || {
         log_error "Version '$requested_ref' not found locally or on origin."
         log_error "Available remote branches:"
@@ -346,6 +357,12 @@ cleanup() {
     log_info "Cleaning up build directories..."
     rm -rf "$BUILD_DIR" "$DIST_DIR"
     log_info "Cleanup complete"
+}
+
+prepare_dist_dir() {
+    log_info "Removing packages from previous builds..."
+    rm -rf "$DIST_DIR"
+    mkdir -p "$DIST_DIR"
 }
 
 build_and_stage() {
@@ -414,7 +431,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --type TYPE         Package type: deb, rpm, or all (default: auto-detect)"
             echo "  --version VER        Package version (default: 1.0.0)"
-            echo "  --git-version VER    Git branch/tag to clone (default: unstable)"
+            echo "  --git-version VER    Git branch/tag to clone (default: 1.0)"
             echo "  --release REL        Package release (default: 1)"
             echo "  --arch ARCH          Architecture (default: auto-detect)"
             echo "  --clean              Clean build directories"
@@ -469,8 +486,10 @@ if [ "$PACKAGE_TYPE" = "all" ] || [ "$PACKAGE_TYPE" = "rpm" ]; then
     check_rpm_build_dependencies
 fi
 
-# Create directories
-mkdir -p "$BUILD_DIR" "$DIST_DIR"
+# Create a clean output directory so packages from previous versions cannot be
+# mistaken for artifacts produced by this build.
+prepare_dist_dir
+mkdir -p "$BUILD_DIR"
 
 # Clone source code from GitHub
 if [ -d "$SOURCE_DIR" ]; then

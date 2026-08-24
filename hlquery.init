@@ -10,14 +10,30 @@
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 NAME=hlquery
-DAEMON=/usr/bin/hlquery-wrapper
-SERVICE_NAME=hlquery.service
-RUNTIME_DIR=/run/hlquery
-STATE_DIR=/var/lib/hlquery
-LOG_DIR=/var/log/hlquery
+DAEMON=${HLQUERY_WRAPPER:-/usr/bin/hlquery-wrapper}
+SYSTEMCTL=${HLQUERY_SYSTEMCTL:-systemctl}
+SERVICE_NAME=${HLQUERY_SERVICE_NAME:-hlquery.service}
+RUNTIME_DIR=${HLQUERY_RUNTIME_DIR:-/run/hlquery}
+STATE_DIR=${HLQUERY_STATE_DIR:-/var/lib/hlquery}
+LOG_DIR=${HLQUERY_LOG_DIR:-/var/log/hlquery}
 
 is_systemd_active() {
-    command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]
+    case "${HLQUERY_INIT_MODE:-auto}" in
+        sysv)
+            return 1
+            ;;
+        systemd)
+            command -v "$SYSTEMCTL" >/dev/null 2>&1
+            return $?
+            ;;
+        auto)
+            command -v "$SYSTEMCTL" >/dev/null 2>&1 && [ -d /run/systemd/system ]
+            ;;
+        *)
+            echo "Invalid HLQUERY_INIT_MODE: ${HLQUERY_INIT_MODE}" >&2
+            return 1
+            ;;
+    esac
 }
 
 ensure_runtime_dirs() {
@@ -45,7 +61,7 @@ run_systemd_command() {
             ;;
     esac
 
-    if systemctl "$action" "$SERVICE_NAME"; then
+    if "$SYSTEMCTL" "$action" "$SERVICE_NAME"; then
         case "$action" in
             start)
                 echo "$NAME service started."
@@ -83,27 +99,31 @@ case "$1" in
             echo "Failed to prepare runtime directories for $NAME." >&2
             exit 1
         }
-        exec run_daemon_command start
+        run_daemon_command start
+        exit $?
         ;;
     stop)
         if is_systemd_active; then
             run_systemd_command stop
             exit $?
         fi
-        exec run_daemon_command stop
+        run_daemon_command stop
+        exit $?
         ;;
     restart|force-reload)
         if is_systemd_active; then
             run_systemd_command restart
             exit $?
         fi
-        exec run_daemon_command restart
+        run_daemon_command restart
+        exit $?
         ;;
     status)
         if is_systemd_active; then
-            exec systemctl status "$SERVICE_NAME"
+            exec "$SYSTEMCTL" status "$SERVICE_NAME"
         fi
-        exec run_daemon_command status
+        run_daemon_command status
+        exit $?
         ;;
     *)
         echo "Usage: $0 {start|stop|restart|force-reload|status}" >&2

@@ -37,6 +37,9 @@ package type in the `dist/` directory:
 - Fedora/RHEL-compatible systems build an `.rpm`
 - Ambiguous or mixed environments build both package types
 
+At the start of each build, the builder removes all existing contents from
+`dist/`, so the directory contains only artifacts produced by the current run.
+
 ### Building All Package Types
 
 ```bash
@@ -104,7 +107,7 @@ $ ./install-deps-rpm.sh
 ### Basic Usage
 
 ```bash
-# Build with default settings (clones from GitHub unstable branch)
+# Build with default settings (clones from the stable GitHub 1.0 branch)
 $ ./build.sh
 
 # Build from a specific Git branch or tag
@@ -116,6 +119,10 @@ $ ./build.sh --version 1.0.0 --release 1
 # Build for specific architecture
 $ ./build.sh --arch x86_64
 ```
+
+The source checkout under `build/hlquery-src` is a disposable build cache.
+Before updating or changing the selected Git branch/tag, the builder removes
+generated files and local changes from that cached checkout.
 
 ### Advanced Usage
 
@@ -140,8 +147,8 @@ $ ./build.sh --clean
 - `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type). Use `--type all` to build both `.deb` and `.rpm` packages.
 - `--version VER`: Package version (default: `1.0.0`)
   - Use package-safe values such as `1.0.0` or `1.0.0~rc1`; do not use OS release text such as `24.04.4 LTS (Noble Numbat)`
-- `--git-version VER`: Git branch or tag to clone (default: `unstable`)
-  - Examples: `unstable`, `1.0.0`, `v1.0.0`, `develop`
+- `--git-version VER`: Git branch or tag to clone (default: `1.0`)
+  - Examples: `1.0`, `v1.0.0`, `unstable`, `develop`
 - `--release REL`: Package release number (default: `1`)
 - `--arch ARCH`: Target architecture (default: auto-detect)
 - `--clean`: Clean build directories and exit
@@ -153,7 +160,7 @@ You can also set these via environment variables:
 
 ```bash
 $ export VERSION=1.0.0
-$ export GIT_VERSION=unstable
+$ export GIT_VERSION=1.0
 $ export RELEASE=1
 $ export ARCH=x86_64
 $ export BUILD_MODE=release
@@ -170,6 +177,7 @@ The Debian package includes:
 - **Configuration**: `/etc/hlquery/`
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
 - **Systemd service**: `/lib/systemd/system/hlquery.service`
+- **SysV compatibility**: `/etc/init.d/hlquery`
 
 ### RPM Package (.rpm)
 
@@ -179,6 +187,7 @@ The RPM package includes:
 - **Configuration**: `/etc/hlquery/`
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
 - **Systemd service**: `/usr/lib/systemd/system/hlquery.service`
+- **SysV compatibility**: `/etc/init.d/hlquery`
 
 ### Installation
 
@@ -190,6 +199,7 @@ $ sudo ./dist/install-hlquery-deb.sh
 
 # Verify installation
 $ systemctl status hlquery
+$ sudo /etc/init.d/hlquery status
 $ hlquery-wrapper status
 ```
 
@@ -207,6 +217,7 @@ $ sudo dnf install dist/hlquery-1.0.0-1.x86_64.rpm
 
 # Verify installation
 $ systemctl status hlquery
+$ sudo /etc/init.d/hlquery status
 $ hlquery-wrapper status
 ```
 

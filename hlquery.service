@@ -16,9 +16,11 @@ LogsDirectory=hlquery
 LogsDirectoryMode=0755
 ConfigurationDirectory=hlquery
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStartPre=/usr/bin/test -r /etc/hlquery/hlquery.conf
 ExecStart=/usr/bin/hlquery --nofork --config /etc/hlquery/hlquery.conf
 Restart=on-failure
 RestartSec=5
+KillSignal=SIGTERM
 TimeoutStartSec=60
 TimeoutStopSec=90
 UMask=0077

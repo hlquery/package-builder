@@ -12,7 +12,9 @@ BUILD_DIR = $(PACKAGE_DIR)/build
 
 .PHONY: all deb rpm clean help
 
-all: deb rpm
+all:
+	@echo "Building Debian and RPM packages..."
+	@./build.sh --type all --version $(PACKAGE_VERSION) --release $(RELEASE) --arch $(ARCH)
 
 deb:
 	@echo "Building Debian package..."
