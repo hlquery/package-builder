@@ -9,6 +9,11 @@
 ### END INIT INFO
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+if [ -r /lib/lsb/init-functions ]; then
+    . /lib/lsb/init-functions
+fi
+
 NAME=hlquery
 DAEMON=${HLQUERY_WRAPPER:-/usr/bin/hlquery-wrapper}
 SYSTEMCTL=${HLQUERY_SYSTEMCTL:-systemctl}

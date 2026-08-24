@@ -20,7 +20,7 @@ RPMBUILD_DIR="$RPM_DIR/rpmbuild"
 
 PACKAGE_NAME="hlquery"
 MAINTAINER="${MAINTAINER:-Carlos F. Ferry <carlos.ferry@gmail.com>}"
-DESCRIPTION="Search beyond keywords - High-performance search engine with RocksDB storage"
+DESCRIPTION="High-performance full-text and vector search engine"
 URL="https://www.hlquery.com"
 
 usage() {
@@ -188,6 +188,8 @@ if [ -f %{_sourcedir}/hlquery.init ]; then
     mkdir -p %{buildroot}/etc/init.d
     install -m 0755 %{_sourcedir}/hlquery.init %{buildroot}/etc/init.d/hlquery
 fi
+rmdir %{buildroot}/run/hlquery 2>/dev/null || true
+rmdir %{buildroot}/run 2>/dev/null || true
 
 %pre
 if ! getent group hlquery >/dev/null 2>&1; then
@@ -201,7 +203,7 @@ fi
 
 %post
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
-chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
+chown hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
 if [ -d /etc/hlquery ]; then
     chown root:hlquery /etc/hlquery
@@ -275,15 +277,17 @@ fi
 %{_bindir}/hlquery-cli
 %{_bindir}/hlquery-benchmark
 %{_bindir}/hlquery-talk
+%{_bindir}/hlquery-backup
 %{_bindir}/hlquery-wrapper
 %{_bindir}/hlqueryctl
 %attr(0755,root,root) %dir %{_sysconfdir}/hlquery
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/hlquery/*
 %verify(not user group) %dir /var/lib/hlquery
 %verify(not user group) %dir /var/log/hlquery
-%verify(not user group) %dir /run/hlquery
 %dir %{_prefix}/lib/hlquery
 %{_prefix}/lib/hlquery/modules
+%dir %{_datadir}/hlquery
+%{_datadir}/hlquery/benchmark
 %{_unitdir}/hlquery.service
 %{_prefix}/lib/systemd/system-preset/80-hlquery.preset
 /etc/init.d/hlquery

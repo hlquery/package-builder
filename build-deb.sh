@@ -18,7 +18,7 @@ DEB_DIR="$PACKAGE_DIR/build/deb"
 # Package metadata
 PACKAGE_NAME="hlquery"
 MAINTAINER="${MAINTAINER:-Carlos F. Ferry <carlos.ferry@gmail.com>}"
-DESCRIPTION="Search beyond keywords - High-performance search engine with RocksDB storage"
+DESCRIPTION="High-performance full-text and vector search engine"
 URL="https://www.hlquery.com"
 
 validate_debian_version() {
@@ -177,17 +177,17 @@ cp -a "$INSTALL_DIR"/. "$DEB_DIR"/
 
 mkdir -p "$DEB_DIR/etc/init.d"
 
-# Normalize systemd unit path for Debian packages.
-if [ -f "$DEB_DIR/usr/lib/systemd/system/hlquery.service" ]; then
-    mkdir -p "$DEB_DIR/lib/systemd/system"
-    mv "$DEB_DIR/usr/lib/systemd/system/hlquery.service" "$DEB_DIR/lib/systemd/system/hlquery.service"
-    rmdir "$DEB_DIR/usr/lib/systemd/system" 2>/dev/null || true
-    rmdir "$DEB_DIR/usr/lib/systemd" 2>/dev/null || true
-    rmdir "$DEB_DIR/usr/lib" 2>/dev/null || true
-elif [ -f "$PACKAGE_DIR/hlquery.service" ] && [ ! -f "$DEB_DIR/lib/systemd/system/hlquery.service" ]; then
-    mkdir -p "$DEB_DIR/lib/systemd/system"
-    cp "$PACKAGE_DIR/hlquery.service" "$DEB_DIR/lib/systemd/system/"
+# Normalize the unit to the canonical merged-/usr location.
+mkdir -p "$DEB_DIR/usr/lib/systemd/system"
+if [ -f "$DEB_DIR/lib/systemd/system/hlquery.service" ]; then
+    mv "$DEB_DIR/lib/systemd/system/hlquery.service" "$DEB_DIR/usr/lib/systemd/system/hlquery.service"
+elif [ -f "$PACKAGE_DIR/hlquery.service" ] && [ ! -f "$DEB_DIR/usr/lib/systemd/system/hlquery.service" ]; then
+    cp "$PACKAGE_DIR/hlquery.service" "$DEB_DIR/usr/lib/systemd/system/"
 fi
+
+# /run is ephemeral. systemd's RuntimeDirectory or the SysV script creates it.
+rmdir "$DEB_DIR/run/hlquery" 2>/dev/null || true
+rmdir "$DEB_DIR/run" 2>/dev/null || true
 
 # Copy SysV init script for non-systemd environments.
 if [ -f "$PACKAGE_DIR/hlquery.init" ]; then
@@ -209,7 +209,7 @@ Description: $DESCRIPTION
  Search beyond keywords. High-performance search engine with RocksDB storage.
  Provides full-text search, hybrid search, and vector similarity search.
 Homepage: $URL
-Depends: $DEBIAN_DEPENDS
+Depends: adduser, $DEBIAN_DEPENDS
 EOF
 
 # Create postinst script
@@ -240,7 +240,7 @@ fi
 
 # Ensure runtime directories exist before first start
 mkdir -p /var/lib/hlquery /var/log/hlquery /run/hlquery
-chown -R hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
+chown hlquery:hlquery /var/lib/hlquery /var/log/hlquery /run/hlquery
 chmod 755 /var/lib/hlquery /var/log/hlquery /run/hlquery
 
 # Configuration can contain credentials. Keep it readable by the service user
@@ -277,7 +277,7 @@ warn_service_start_failed() {
     echo "Inspect with: systemctl status hlquery.service || journalctl -u hlquery.service -n 80 --no-pager" >&2
 }
 
-if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /lib/systemd/system/hlquery.service ]; then
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ] && [ -f /usr/lib/systemd/system/hlquery.service ]; then
     systemctl daemon-reload
     if command -v deb-systemd-helper >/dev/null 2>&1; then
         deb-systemd-helper unmask hlquery.service >/dev/null || true
@@ -322,7 +322,11 @@ if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ] || [ "$1" = "upgrade" ]; then
     elif command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet hlquery.service 2>/dev/null; then
         systemctl stop hlquery.service || true
     elif [ -x /etc/init.d/hlquery ]; then
-        /etc/init.d/hlquery stop >/dev/null 2>&1 || true
+        if command -v invoke-rc.d >/dev/null 2>&1; then
+            invoke-rc.d hlquery stop >/dev/null 2>&1 || true
+        else
+            /etc/init.d/hlquery stop >/dev/null 2>&1 || true
+        fi
     fi
 fi
 
@@ -358,6 +362,38 @@ chmod +x "$DEB_DIR/DEBIAN/postrm"
 if [ -d "$DEB_DIR/etc/hlquery" ]; then
     find "$DEB_DIR/etc/hlquery" -type f | sort | sed "s#^$DEB_DIR##" > "$DEB_DIR/DEBIAN/conffiles"
 fi
+echo "/etc/init.d/hlquery" >> "$DEB_DIR/DEBIAN/conffiles"
+
+# Normalize modes inherited from developer worktrees before creating the archive.
+find "$DEB_DIR" -type d -exec chmod 0755 {} \;
+find "$DEB_DIR/etc/hlquery" -maxdepth 1 -type f -exec chmod 0644 {} \;
+chmod 0644 "$DEB_DIR/usr/lib/systemd/system/hlquery.service"
+find "$DEB_DIR/usr/share/hlquery" -type f -exec chmod 0644 {} \; 2>/dev/null || true
+if [ -f "$DEB_DIR/usr/bin/hlquery-wrapper" ]; then
+    sed -i '1s|^#!/usr/bin/env perl$|#!/usr/bin/perl|' "$DEB_DIR/usr/bin/hlquery-wrapper"
+fi
+if command -v strip >/dev/null 2>&1 && compgen -G "$DEB_DIR/usr/lib/hlquery/modules/*.so" >/dev/null; then
+    strip --strip-unneeded "$DEB_DIR"/usr/lib/hlquery/modules/*.so
+fi
+
+DOC_DIR="$DEB_DIR/usr/share/doc/$PACKAGE_NAME"
+mkdir -p "$DOC_DIR"
+chmod 0755 "$DEB_DIR/usr/share/doc" "$DOC_DIR"
+for license_source in "$PACKAGE_DIR/build/hlquery-src/LICENSE.md" "$PACKAGE_DIR/../../LICENSE.md"; do
+    if [ -f "$license_source" ]; then
+        cp "$license_source" "$DOC_DIR/copyright"
+        chmod 0644 "$DOC_DIR/copyright"
+        break
+    fi
+done
+if [ ! -f "$DOC_DIR/copyright" ]; then
+    echo "Error: hlquery license file not found; refusing to build an incomplete Debian package." >&2
+    exit 1
+fi
+printf '%s (%s-%s) stable; urgency=medium\n\n  * Package hlquery release %s.\n\n -- %s  %s\n' \
+    "$PACKAGE_NAME" "$VERSION" "$RELEASE" "$DISPLAY_VERSION" "$MAINTAINER" "$(date -R)" \
+    | gzip -9n > "$DOC_DIR/changelog.Debian.gz"
+chmod 0644 "$DOC_DIR/changelog.Debian.gz"
 
 # Build the package
 mkdir -p "$DIST_DIR"

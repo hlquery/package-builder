@@ -176,7 +176,7 @@ The Debian package includes:
 - **Binary files**: `/usr/bin/hlquery`, `/usr/bin/hlquery-cli`, `/usr/bin/hlquery-wrapper`
 - **Configuration**: `/etc/hlquery/`
 - **Data directories**: `/var/lib/hlquery`, `/var/log/hlquery`, `/run/hlquery`
-- **Systemd service**: `/lib/systemd/system/hlquery.service`
+- **Systemd service**: `/usr/lib/systemd/system/hlquery.service`
 - **SysV compatibility**: `/etc/init.d/hlquery`
 
 ### RPM Package (.rpm)
@@ -209,11 +209,11 @@ The generated install helper sets Debian's standard root paths before invoking `
 
 ```bash
 # Install package
-$ sudo rpm -ivh dist/hlquery-1.0.0-1.x86_64.rpm
+$ sudo rpm -ivh dist/hlquery-1.0.0.x86_64.rpm
 
 # Or use yum/dnf
-$ sudo yum install dist/hlquery-1.0.0-1.x86_64.rpm
-$ sudo dnf install dist/hlquery-1.0.0-1.x86_64.rpm
+$ sudo yum install dist/hlquery-1.0.0.x86_64.rpm
+$ sudo dnf install dist/hlquery-1.0.0.x86_64.rpm
 
 # Verify installation
 $ systemctl status hlquery
@@ -284,10 +284,10 @@ Check package contents:
 
 ```bash
 # Debian
-$ dpkg -c dist/hlquery_1.0.0-1_amd64.deb
+$ dpkg -c dist/hlquery_1.0.0_amd64.deb
 
 # RPM
-$ rpm -qlp dist/hlquery-1.0.0-1.x86_64.rpm
+$ rpm -qlp dist/hlquery-1.0.0.x86_64.rpm
 ```
 
 ## Support
