@@ -1,10 +1,11 @@
 # Makefile for hlquery package builder
 
 PACKAGE_NAME = hlquery
-PACKAGE_VERSION ?= 1.0.0
+PACKAGE_VERSION ?=
 RELEASE ?= 1
 ARCH ?= $(shell uname -m)
 BUILD_MODE ?= release
+VERSION_ARG = $(if $(strip $(PACKAGE_VERSION)),--version $(PACKAGE_VERSION),)
 
 PACKAGE_DIR = $(shell pwd)
 DIST_DIR = $(PACKAGE_DIR)/dist
@@ -14,15 +15,15 @@ BUILD_DIR = $(PACKAGE_DIR)/build
 
 all:
 	@echo "Building Debian and RPM packages..."
-	@./build.sh --type all --version $(PACKAGE_VERSION) --release $(RELEASE) --arch $(ARCH)
+	@./build.sh --type all $(VERSION_ARG) --release $(RELEASE) --arch $(ARCH)
 
 deb:
 	@echo "Building Debian package..."
-	@./build.sh --type deb --version $(PACKAGE_VERSION) --release $(RELEASE) --arch $(ARCH)
+	@./build.sh --type deb $(VERSION_ARG) --release $(RELEASE) --arch $(ARCH)
 
 rpm:
 	@echo "Building RPM package..."
-	@./build.sh --type rpm --version $(PACKAGE_VERSION) --release $(RELEASE) --arch $(ARCH)
+	@./build.sh --type rpm $(VERSION_ARG) --release $(RELEASE) --arch $(ARCH)
 
 clean:
 	@echo "Cleaning build directories..."
@@ -41,7 +42,7 @@ help:
 	@echo "  help     Show this help message"
 	@echo ""
 	@echo "Variables:"
-	@echo "  PACKAGE_VERSION  Package version (default: 1.0.0)"
+	@echo "  PACKAGE_VERSION  Package version (default: cloned src/version.sh)"
 	@echo "  RELEASE  Package release (default: 1)"
 	@echo "  ARCH     Architecture (default: auto-detect)"
 	@echo "  BUILD_MODE Build mode (default: release)"

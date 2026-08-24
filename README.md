@@ -24,18 +24,15 @@ The package builder clones the requested hlquery branch or tag, builds the sourc
 
 Use the package builder when you need reproducible installable artifacts for Debian, Ubuntu, Fedora, RHEL-compatible systems, or other RPM-based distributions. It keeps the build, staging, service files, package metadata, and install scripts in one place instead of requiring manual packaging steps.
 
-### Building Native Package Type
+### Building Both Package Types by Default
 
 ```bash
 ./build.sh
 ```
 
-By default, `build.sh` auto-detects the current platform and builds the native
-package type in the `dist/` directory:
-
-- Debian/Ubuntu systems build a `.deb`
-- Fedora/RHEL-compatible systems build an `.rpm`
-- Ambiguous or mixed environments build both package types
+By default, `build.sh` builds both the Debian and RPM package in the `dist/`
+directory. Use `--type deb` or `--type rpm` when you only need one format.
+The package version is read from `src/version.sh` in the cloned source tree.
 
 At the start of each build, the builder removes all existing contents from
 `dist/`, so the directory contains only artifacts produced by the current run.
@@ -107,7 +104,7 @@ $ ./install-deps-rpm.sh
 ### Basic Usage
 
 ```bash
-# Build with default settings (clones from the stable GitHub 1.0 branch)
+# Build with default settings (version comes from the cloned src/version.sh)
 $ ./build.sh
 
 # Build from a specific Git branch or tag
@@ -144,8 +141,8 @@ $ ./build.sh --clean
 
 ### Command-Line Options
 
-- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: auto-detect native package type). Use `--type all` to build both `.deb` and `.rpm` packages.
-- `--version VER`: Package version (default: `1.0.0`)
+- `--type TYPE`: Package type to build (`deb`, `rpm`, or `all`; default: `all`)
+- `--version VER`: Package version (default: value from the cloned `src/version.sh`)
   - Use package-safe values such as `1.0.0` or `1.0.0~rc1`; do not use OS release text such as `24.04.4 LTS (Noble Numbat)`
 - `--git-version VER`: Git branch or tag to clone (default: `1.0`)
   - Examples: `1.0`, `v1.0.0`, `unstable`, `develop`

@@ -18,7 +18,7 @@ PACKAGE_DIR="$SCRIPT_DIR"
 BUILD_DIR="$PACKAGE_DIR/build"
 DIST_DIR="$PACKAGE_DIR/dist"
 SOURCE_DIR="$BUILD_DIR/hlquery-src"
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-}"
 GIT_VERSION="${GIT_VERSION:-1.0}"
 RELEASE="${RELEASE:-1}"
 ARCH="${ARCH:-$(uname -m)}"
@@ -72,6 +72,32 @@ normalize_package_version() {
     fi
 
     printf '%s' "$raw_version"
+}
+
+resolve_package_version() {
+    local version_script="$SOURCE_DIR/src/version.sh"
+
+    if [ -n "$VERSION" ]; then
+        return 0
+    fi
+
+    if [ ! -f "$version_script" ]; then
+        log_error "Cannot determine package version: missing $version_script"
+        log_error "Restore src/version.sh or provide an explicit version with --version."
+        exit 1
+    fi
+
+    VERSION="$(sh "$version_script")" || {
+        log_error "Failed to read package version from $version_script"
+        exit 1
+    }
+
+    if [ -z "$(trim_value "$VERSION")" ]; then
+        log_error "Package version script returned an empty value: $version_script"
+        exit 1
+    fi
+
+    log_info "Package version read from src/version.sh: $VERSION"
 }
 
 validate_package_version() {
@@ -398,7 +424,7 @@ build_and_stage() {
 }
 
 # Parse arguments
-PACKAGE_TYPE=""
+PACKAGE_TYPE="all"
 while [[ $# -gt 0 ]]; do
     case $1 in
         --type)
@@ -429,8 +455,8 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --type TYPE         Package type: deb, rpm, or all (default: auto-detect)"
-            echo "  --version VER        Package version (default: 1.0.0)"
+            echo "  --type TYPE         Package type: deb, rpm, or all (default: all)"
+            echo "  --version VER        Package version (default: cloned src/version.sh)"
             echo "  --git-version VER    Git branch/tag to clone (default: 1.0)"
             echo "  --release REL        Package release (default: 1)"
             echo "  --arch ARCH          Architecture (default: auto-detect)"
@@ -445,21 +471,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-VERSION="$(normalize_package_version "$VERSION")"
 RELEASE="$(trim_value "$RELEASE")"
-validate_package_version "$VERSION"
 validate_package_release "$RELEASE"
-
-# Default to the native package type when the platform is clear.
-if [ -z "$PACKAGE_TYPE" ]; then
-    if is_rpm_platform && ! is_debian_platform; then
-        PACKAGE_TYPE="rpm"
-    elif is_debian_platform && ! is_rpm_platform; then
-        PACKAGE_TYPE="deb"
-    else
-        PACKAGE_TYPE="all"
-    fi
-fi
 
 case "$PACKAGE_TYPE" in
     deb|rpm|all)
@@ -470,11 +483,15 @@ case "$PACKAGE_TYPE" in
         ;;
 esac
 
-log_info "Building $PACKAGE_NAME version $VERSION"
 log_info "Package type: $PACKAGE_TYPE"
 log_info "Architecture: $ARCH"
 log_info "Build mode: $BUILD_MODE"
 log_info "Git version: $GIT_VERSION"
+if [ -n "$VERSION" ]; then
+    log_info "Requested package version: $VERSION"
+else
+    log_info "Package version: read from src/version.sh after source checkout"
+fi
 
 if [ "$PACKAGE_TYPE" = "all" ] || [ "$PACKAGE_TYPE" = "deb" ]; then
     log_info "Checking Debian package build prerequisites..."
@@ -515,6 +532,11 @@ else
         cd ..
     fi
 fi
+
+resolve_package_version
+VERSION="$(normalize_package_version "$VERSION")"
+validate_package_version "$VERSION"
+log_info "Building $PACKAGE_NAME version $VERSION"
 
 cd "$SOURCE_DIR"
 
